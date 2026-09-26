@@ -6,7 +6,7 @@
   "description": "Daily football training app for a young player. Static site, GitHub Pages.",
   "scripts": {
     "serve": "node scripts/serve.mjs",
-    "test:unit": "node --test tests/unit/",
+    "test:unit": "node --test \"tests/unit/*.test.js\"",
     "test:e2e": "playwright test",
     "test": "npm run test:unit && npm run test:e2e",
     "icons": "node scripts/icons.mjs"
