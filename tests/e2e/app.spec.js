@@ -218,3 +218,30 @@ test('no horizontal overflow on any main screen', async ({ page }) => {
     expect(over, h).toBeLessThanOrEqual(0);
   }
 });
+
+test('drill page: YouTube demos show as thumbnails, tap loads the nocookie embed', async ({ page }) => {
+  await page.route('https://i.ytimg.com/**', (r) => r.fulfill({ status: 200, contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="#345"/></svg>' }));
+  await page.route('https://www.youtube-nocookie.com/**', (r) => r.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><title>stub</title><body style="background:#000"></body>' }));
+  await page.goto(at(MON, '#/drill/m_beat_cone'));
+  const vids = page.getByTestId('video');
+  await expect(vids).toHaveCount(3);
+  await expect(vids.first()).toContainText('Football Australia');
+  await expect(page.getByTestId('yt-link').first()).toHaveAttribute('href', /youtube\.com\/watch\?v=SG_Da2nwEhs/);
+  await expect(page.locator('iframe')).toHaveCount(0);
+  await vids.first().getByRole('button').click();
+  const f = page.getByTestId('video-frame');
+  await expect(f).toHaveCount(1);
+  await expect(f).toHaveAttribute('src', /^https:\/\/www\.youtube-nocookie\.com\/embed\/SG_Da2nwEhs\?/);
+  // Playing a second one closes the first.
+  await vids.nth(1).getByRole('button').click();
+  await expect(page.getByTestId('video-frame')).toHaveCount(1);
+  await expect(page.getByTestId('video-frame')).toHaveAttribute('src', /u0rqvGrl1YU/);
+  await expect(vids.first().getByRole('button')).toBeVisible();
+});
+
+test('today plan marks drills with a video; library tiles count videos', async ({ page }) => {
+  await page.goto(at(MON));
+  await expect(page.getByTestId('plan-item').first()).toContainText('video');
+  await page.goto(at(MON, '#/drills'));
+  await expect(page.getByTestId('tile').first()).toContainText(/\d+ videos?/);
+});

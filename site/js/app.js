@@ -2,6 +2,7 @@
 import * as D from './data.js';
 import * as P from './plan.js';
 import * as S from './storage.js';
+import { VIDEOS } from './videos.js';
 
 const app = document.getElementById('app');
 const coachEl = document.getElementById('coach');
@@ -19,6 +20,24 @@ function persist() { S.save(state); }
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const areaOf = (id) => D.AREAS.find((a) => a.id === id);
 const tftFor = (d) => d.tft || (areaOf(d.area) || {}).tft || null;
+const videosFor = (id) => VIDEOS[id] || [];
+const kidVideos = (id) => videosFor(id).filter((v) => !v.dad);
+const fmtLen = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+const ytThumb = (id, q = 'sddefault') => `https://i.ytimg.com/vi/${encodeURIComponent(id)}/${q}.jpg`;
+const ytWatch = (id) => `https://www.youtube.com/watch?v=${encodeURIComponent(id)}`;
+const ytEmbed = (id) => `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}?autoplay=1&playsinline=1&rel=0&modestbranding=1`;
+const VALID_YT = /^[A-Za-z0-9_-]{11}$/;
+function videoCard(v, i) {
+  if (!VALID_YT.test(v.id)) return '';
+  return `<li class="vid" data-testid="video"><button class="vid-play" data-action="play-video" data-vid="${v.id}" aria-label="Play: ${esc(v.t)}">
+      <img src="${ytThumb(v.id)}" data-fallback="${ytThumb(v.id, 'hqdefault')}" alt="" loading="lazy" width="640" height="480"><span class="vid-btn" aria-hidden="true"></span><span class="vid-len">${fmtLen(v.s)}</span></button>
+    <div class="vid-info"><span class="vid-t">${esc(v.t)}${v.dad ? ' <span class="vid-dad">For Dad</span>' : ''}</span><span class="vid-ch">${esc(v.ch)} · <a href="${ytWatch(v.id)}" target="_blank" rel="noopener" data-testid="yt-link">YouTube ↗</a></span></div></li>`;
+}
+function videoSection(list, title = 'Watch how') {
+  if (!list.length) return '';
+  return `<section class="videos" data-testid="videos"><h2 class="eyebrow">${esc(title)}</h2><ul class="vid-list">${list.map(videoCard).join('')}</ul>
+    <p class="small muted vid-note">Videos play from YouTube. Watch one, then go and do it.</p></section>`;
+}
 const NEED_LABEL = { wall: 'a wall', rebounder: 'a rebounder', partner: 'Dad' };
 const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
 const withUnit = (v, unit) => (unit.startsWith('/') ? `${v}${unit}` : `${v} ${unit}`);
@@ -204,7 +223,7 @@ function planItem(b, log) {
   const cls = b.slot === 'Focus' ? 'focus' : (b.slot === 'Brain' ? 'brain-slot' : '');
   return `<li class="${done ? 'done' : ''}"><a href="#/drill/${b.drill}" data-testid="plan-item" data-drill="${b.drill}">
     <span class="slot ${cls}">${esc(b.slot)}</span>
-    <span><span class="name">${esc(d.name)}</span><span class="meta">${d.mins} min · ${esc(area.name)}${tftFor(d) ? ' · TFT video' : ''}</span></span>
+    <span><span class="name">${esc(d.name)}</span><span class="meta">${d.mins} min · ${esc(area.name)}${kidVideos(b.drill).length ? ' · ▶ video' : (tftFor(d) ? ' · TFT video' : '')}</span></span>
     <span class="check" role="img" aria-label="${done ? 'Done' : 'Not done yet'}"></span></a></li>`;
 }
 
@@ -300,6 +319,7 @@ function viewDrill(id, from) {
       <h1 data-testid="drill-name">${esc(d.name)}</h1><p class="drill-cue" data-testid="drill-cue">${esc(d.cue)}</p></header>
     ${missing.length ? `<p class="setup-note">Needs ${missing.map((m) => NEED_LABEL[m]).join(' and ')}. Dad can tick it in the Dad tab if you have it.</p>` : ''}
     <ol class="steps">${d.steps.map((x) => `<li>${esc(x)}</li>`).join('')}</ol>
+    ${videoSection(videosFor(id))}
     ${timer}
     ${tft ? `<a class="tft-link" href="${tft}" target="_blank" rel="noopener" data-testid="tft-link"><span>Watch the ${esc(area.name)} videos<small>On tft-tube. Free login needed.</small></span><span aria-hidden="true">↗</span></a>` : ''}
     ${test}
@@ -309,9 +329,11 @@ function viewDrill(id, from) {
 
 function viewLibrary() {
   const count = (id) => Object.values(D.DRILLS).filter((d) => d.area === id).length;
+  const vcount = (id) => new Set(Object.entries(D.DRILLS).filter(([, d]) => d.area === id).flatMap(([k]) => videosFor(k).map((v) => v.id))).size;
   return `<h1>Drills</h1><p class="muted" style="margin-top:8px">${D.AREAS.length} areas. Tap one to see its drills.</p>
-    <div class="legend"><span class="l-tft">tft-tube area (videos)</span><span class="l-new">Added for the game around the ball</span></div>
-    <div class="tiles">${D.AREAS.map((a) => `<a class="tile ${a.tft ? '' : 'new'}" href="#/area/${a.id}" data-testid="tile"><span class="t-name">${esc(a.name)}</span><span class="t-meta">${plural(count(a.id), 'drill')}${a.tft ? ' · TFT videos' : ''}</span></a>`).join('')}</div>`;
+    <div class="legend"><span class="l-tft">tft-tube area</span><span class="l-new">Added for the game around the ball</span></div>
+    <p class="small muted" style="margin-top:8px">Every drill has a short YouTube demo. tft-tube areas also link to the TFT videos.</p>
+    <div class="tiles">${D.AREAS.map((a) => `<a class="tile ${a.tft ? '' : 'new'}" href="#/area/${a.id}" data-testid="tile"><span class="t-name">${esc(a.name)}</span><span class="t-meta">${plural(count(a.id), 'drill')} · ${plural(vcount(a.id), 'video')}${a.tft ? ' + TFT' : ''}</span></a>`).join('')}</div>`;
 }
 
 function viewArea(id) {
@@ -324,7 +346,7 @@ function viewArea(id) {
     ${a.tft ? `<a class="tft-link" href="${a.tft}" target="_blank" rel="noopener"><span>Watch the ${esc(a.name)} videos<small>On tft-tube. Free login needed.</small></span><span aria-hidden="true">↗</span></a>` : ''}
     <ul class="drill-list">${list.map(([did, d]) => {
     const miss = (d.needs || []).filter((n) => !eq[n]);
-    return `<li><a href="#/drill/${did}?from=lib" data-testid="area-drill"><span><span class="name">${esc(d.name)}</span><br><span class="needs">${d.mins} min${d.needs ? ` · needs ${d.needs.map((n) => NEED_LABEL[n]).join(', ')}` : ''}${miss.length ? ' (not ticked)' : ''}</span></span><span aria-hidden="true">›</span></a></li>`;
+    return `<li><a href="#/drill/${did}?from=lib" data-testid="area-drill"><span><span class="name">${esc(d.name)}</span><br><span class="needs">${d.mins} min${videosFor(did).length ? ` · ${plural(videosFor(did).length, 'video')}` : ''}${d.needs ? ` · needs ${d.needs.map((n) => NEED_LABEL[n]).join(', ')}` : ''}${miss.length ? ' (not ticked)' : ''}</span></span><span aria-hidden="true">›</span></a></li>`;
   }).join('')}</ul>`;
 }
 
@@ -489,6 +511,7 @@ function viewDad() {
       <div class="row" style="flex-wrap:wrap"><button class="btn small" data-action="export">Export</button><label class="btn small" for="import">Import<input id="import" type="file" accept="application/json,.json" data-action="import" class="sr-only"></label><button class="btn small ghost" data-action="reset" data-testid="reset">Reset all</button></div></div></div>
     <div class="section"><h2>Notes</h2><ul class="sources">
       <li>Videos: <a href="https://tft-tube.com/" target="_blank" rel="noopener">tft-tube.com</a> (Technical Football Tuition). Free login. Links only, nothing copied.</li>
+      <li>YouTube demos are embedded from their channels (Football Australia, England Football, FIFA 11+ Kids and coaching channels). Channel names are shown under each one. Nothing is downloaded. Videos marked <b>For Dad</b> are longer explainers.</li>
       <li>No heading practice: England's FA says heading should not be introduced in training at U6 to U11 (<a href="https://www.thefa.com/-/media/thefacom-new/files/rules-and-regulations/2023-24/heading-guidance/youth-heading-guidance-chart.ashx" target="_blank" rel="noopener">FA guidance</a>).</li>
       <li>Four core skills for U10 to U13: striking, first touch, 1v1, running with the ball (<a href="https://footballaustralia.com.au/sites/ffa/files/2017-09/FFA%20National%20Curriculum_1ma6qrmro1pyq10gzxo5rcn7ld.pdf" target="_blank" rel="noopener">Football Australia curriculum</a>).</li>
       <li>Load: fewer organised hours a week than his age, 1 to 2 days off (<a href="https://publications.aap.org/pediatrics/article/119/6/1242/70751/" target="_blank" rel="noopener">AAP</a>).</li>
@@ -541,6 +564,7 @@ app.addEventListener('click', (e) => {
   const a = b.dataset.action;
   if (a === 'timer-toggle') { if (T.running) tPause(); else tStart(); if (T.mode === 'up' && !T.running) prefillScore(); }
   else if (a === 'timer-reset') tReset();
+  else if (a === 'play-video') playVideo(b);
   else if (a === 'coach') { const d = D.DRILLS[parseRoute().parts[1]]; startCoach(b.dataset.mode, d ? d.cue : ''); }
   else if (a === 'done') onDone(b.dataset.id, b.dataset.from === 'lib');
   else if (a === 'pick') onPick(Number(b.dataset.i));
@@ -553,6 +577,28 @@ app.addEventListener('click', (e) => {
     }
   }
 });
+
+app.addEventListener('error', (e) => {
+  const img = e.target;
+  if (img.tagName === 'IMG' && img.dataset.fallback && img.src !== img.dataset.fallback) img.src = img.dataset.fallback;
+}, true);
+
+function playVideo(btn) {
+  const id = btn.dataset.vid;
+  if (!VALID_YT.test(id)) return;
+  document.querySelectorAll('.vid-frame').forEach((f) => { const li = f.closest('.vid'); f.remove(); li.querySelector('.vid-play').hidden = false; });
+  if (T.running) tPause();
+  const f = document.createElement('iframe');
+  f.className = 'vid-frame';
+  f.src = ytEmbed(id);
+  f.title = btn.getAttribute('aria-label') || 'Video';
+  f.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen';
+  f.allowFullscreen = true;
+  f.referrerPolicy = 'strict-origin-when-cross-origin';
+  f.setAttribute('data-testid', 'video-frame');
+  btn.hidden = true;
+  btn.after(f);
+}
 
 function prefillScore() {
   const inp = document.getElementById('score');

@@ -20,6 +20,14 @@ Static site (HTML, CSS, JavaScript modules, no build step), hosted on GitHub Pag
 
 Drills that need kit he doesn't have swap automatically to one that doesn't.
 
+## Videos
+
+Every drill has 1–3 short YouTube demos under **Watch how** (66 videos). Most are 15–90 second clips from Football Australia's Skills Challenge, England Football, FIFA 11+ Kids and youth coaching channels. Longer explainers are tagged **For Dad**.
+
+- Played with `youtube-nocookie.com` embeds. The iframe loads only when he taps play, so nothing from YouTube loads until then. Nothing is downloaded or re-hosted, and each card credits the channel and links to YouTube.
+- The list is in `site/js/videos.js` (drill id → videos). Swap or add an id there.
+- `npm run check:videos` checks every id is still public and embeddable. A weekly GitHub Action runs the same check and fails (emailing the owner) if a video is removed or has embedding turned off.
+
 ## Weekly focus
 
 The focus rotates weekly. The default order for a centre back is Bounce → Look, then touch → Head up → Slow him, don't dive → Level with your partner → Keeper's ball: go wide → Win the second ball. Other positions have their own order. Dad can override any week.
@@ -30,7 +38,7 @@ The focus rotates weekly. The default order for a centre back is Bounce → Look
 - Load check: fewer organised hours per week than his age, with 1–2 days off ([AAP](https://publications.aap.org/pediatrics/article/119/6/1242/70751/)).
 - Core skills focus from Football Australia's curriculum: striking, first touch, 1v1, running with the ball ([Football Australia National Curriculum](https://footballaustralia.com.au/sites/ffa/files/2017-09/FFA%20National%20Curriculum_1ma6qrmro1pyq10gzxo5rcn7ld.pdf)).
 - Belt targets are starter goals for home practice, not age norms.
-- tft-tube videos are linked, not copied.
+- tft-tube videos are linked, not copied. YouTube videos are embedded from their channels, not copied.
 
 ## Develop
 
@@ -40,6 +48,7 @@ npm run serve            # http://127.0.0.1:4173
 npm run test:unit        # node:test, plan logic + data integrity
 npx playwright install chrome
 npm run test:e2e         # Playwright, phone + desktop
+npm run check:videos     # every YouTube id still public + embeddable
 ```
 
 Add `?date=YYYY-MM-DD` to the URL to preview any day. Edit drills, focuses, themes and brain pictures in `site/js/data.js`.

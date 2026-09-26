@@ -256,3 +256,23 @@ test('storage: round trip and corrupt data', () => {
   S.clear(fake);
   assert.equal(mem.size, 0);
 });
+
+test('videos: every drill has at least one kid-level YouTube demo, ids valid, keys match drills', async () => {
+  const { VIDEOS } = await import('../../site/js/videos.js');
+  for (const k of Object.keys(VIDEOS)) assert.ok(D.DRILLS[k], `videos key ${k} is a drill`);
+  for (const [id, d] of Object.entries(D.DRILLS)) {
+    if (id === 'b_pause_pick') continue; // in-app game, no video
+    const list = VIDEOS[id] || [];
+    assert.ok(list.some((v) => !v.dad), `${id} has a kid-level video`);
+  }
+  for (const list of Object.values(VIDEOS)) {
+    const ids = list.map((v) => v.id);
+    assert.equal(new Set(ids).size, ids.length, 'no duplicate video in one drill');
+    for (const v of list) {
+      assert.match(v.id, /^[A-Za-z0-9_-]{11}$/);
+      assert.ok(v.t && v.t.length <= 60, `label ok for ${v.id}`);
+      assert.ok(v.ch, `channel credit for ${v.id}`);
+      assert.ok(Number.isInteger(v.s) && v.s > 0 && v.s < 1800, `length ok for ${v.id}`);
+    }
+  }
+});

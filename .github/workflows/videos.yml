@@ -1,0 +1,22 @@
+name: Check videos
+
+# Weekly: make sure every YouTube demo is still public and embeddable.
+# A failed run emails the repo owner with the video ids to swap out in site/js/videos.js.
+on:
+  schedule:
+    - cron: '0 20 * * 6'   # Sunday 06:00-07:00 Melbourne
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: node scripts/check-videos.mjs
