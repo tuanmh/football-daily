@@ -1,0 +1,85 @@
+name: Test and deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Unit tests
+        run: npm run test:unit
+      - name: Chrome for Playwright
+        run: google-chrome --version || npx playwright install --with-deps chrome
+      - name: End-to-end tests (phone + desktop)
+        run: npx playwright test
+        env:
+          CI: 'true'
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: playwright-results
+          path: test-results/
+          retention-days: 7
+
+  deploy:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Stamp service worker cache version
+        run: sed -i "s/__BUILD__/${GITHUB_SHA::8}/" site/sw.js
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@v5
+
+  smoke:
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: google-chrome --version || npx playwright install --with-deps chrome
+      - name: Wait for the live site to serve this commit
+        run: |
+          URL="https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}/"
+          for i in $(seq 1 60); do
+            if curl -fsS "${URL}sw.js?cb=${RANDOM}${i}" | grep -q "fd-${GITHUB_SHA::8}"; then echo "live: $URL"; exit 0; fi
+            sleep 10
+          done
+          echo "site did not update in time"; exit 1
+      - name: End-to-end tests against the live site
+        run: npx playwright test
+        env:
+          CI: 'true'
+          BASE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
