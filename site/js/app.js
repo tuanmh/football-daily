@@ -30,7 +30,7 @@ const VALID_YT = /^[A-Za-z0-9_-]{11}$/;
 function videoCard(v, i) {
   if (!VALID_YT.test(v.id)) return '';
   return `<li class="vid" data-testid="video"><button class="vid-play" data-action="play-video" data-vid="${v.id}" aria-label="Play: ${esc(v.t)}">
-      <img src="${ytThumb(v.id)}" data-fallback="${ytThumb(v.id, 'hqdefault')}" alt="" loading="lazy" width="640" height="480"><span class="vid-btn" aria-hidden="true"></span><span class="vid-len">${fmtLen(v.s)}</span></button>
+      <img src="${ytThumb(v.id, v.th === 'hq' ? 'hqdefault' : 'sddefault')}" data-fallback="${ytThumb(v.id, 'hqdefault')}" alt="" loading="lazy" width="640" height="480"><span class="vid-btn" aria-hidden="true"></span><span class="vid-len">${fmtLen(v.s)}</span></button>
     <div class="vid-info"><span class="vid-t">${esc(v.t)}${v.dad ? ' <span class="vid-dad">For Dad</span>' : ''}</span><span class="vid-ch">${esc(v.ch)} · <a href="${ytWatch(v.id)}" target="_blank" rel="noopener" data-testid="yt-link">YouTube ↗</a></span></div></li>`;
 }
 function videoSection(list, title = 'Watch how') {

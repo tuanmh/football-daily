@@ -9,8 +9,12 @@ const SUN = '2026-10-04'; // rest
 const at = (date, hash = '#/') => `./?date=${date}&nosw${hash}`;
 
 const errors = [];
+const STUB_IMG = '<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="#345"/></svg>';
 test.beforeEach(async ({ page }) => {
   errors.length = 0;
+  // Tests never depend on YouTube: thumbnails and embeds are stubbed.
+  await page.route('https://i.ytimg.com/**', (r) => r.fulfill({ status: 200, contentType: 'image/svg+xml', body: STUB_IMG }));
+  await page.route('https://www.youtube-nocookie.com/**', (r) => r.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><title>stub</title>' }));
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
 });
@@ -220,13 +224,12 @@ test('no horizontal overflow on any main screen', async ({ page }) => {
 });
 
 test('drill page: YouTube demos show as thumbnails, tap loads the nocookie embed', async ({ page }) => {
-  await page.route('https://i.ytimg.com/**', (r) => r.fulfill({ status: 200, contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="#345"/></svg>' }));
-  await page.route('https://www.youtube-nocookie.com/**', (r) => r.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><title>stub</title><body style="background:#000"></body>' }));
   await page.goto(at(MON, '#/drill/m_beat_cone'));
   const vids = page.getByTestId('video');
   await expect(vids).toHaveCount(3);
   await expect(vids.first()).toContainText('Football Australia');
   await expect(page.getByTestId('yt-link').first()).toHaveAttribute('href', /youtube\.com\/watch\?v=SG_Da2nwEhs/);
+  await expect(vids.first().locator('img')).toHaveAttribute('src', /i\.ytimg\.com\/vi\/SG_Da2nwEhs\/sddefault\.jpg/);
   await expect(page.locator('iframe')).toHaveCount(0);
   await vids.first().getByRole('button').click();
   const f = page.getByTestId('video-frame');

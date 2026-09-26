@@ -1,5 +1,6 @@
 // YouTube demos for each drill. Played with youtube-nocookie embeds, tap to load. Nothing is downloaded or re-hosted.
-// Fields: id = YouTube video id, t = short label shown to him, ch = channel (credit), s = length in seconds, dad = longer explainer for Dad.
+// Fields: id = YouTube video id, t = short label shown to him, ch = channel (credit), s = length in seconds,
+// dad = longer explainer for Dad, th = 'hq' when the video has no SD thumbnail.
 // Check they still play: npm run check:videos
 export const VIDEOS = {
   d_toetaps: [
@@ -64,7 +65,7 @@ export const VIDEOS = {
     { id: 'YVXLdTN1ZqE', t: '5 mistakes young wingers make', ch: 'Unisport', s: 412, dad: true },
   ],
   m_sole_rolls: [
-    { id: '9lqcnQ4cWpY', t: 'Sole rolls', ch: 'Anytime Soccer Training', s: 90 },
+    { id: '9lqcnQ4cWpY', t: 'Sole rolls', ch: 'Anytime Soccer Training', s: 90, th: 'hq' },
     { id: '6XpjrFgx414', t: 'Sole rolls for kids', ch: 'Ogden Soccer', s: 57 },
   ],
   m_inside_outside: [
@@ -122,7 +123,7 @@ export const VIDEOS = {
   ],
   f_jockey: [
     { id: 'uVkpeXS6Byw', t: 'Don\'t dive in: 1v1 defending', ch: 'KS Performance', s: 107 },
-    { id: 'hgrStIbFls0', t: 'How to jockey', ch: 'HowcastSportsFitness', s: 83 },
+    { id: 'hgrStIbFls0', t: 'How to jockey', ch: 'HowcastSportsFitness', s: 83, th: 'hq' },
     { id: 'rBHKDJEVgVM', t: 'Jockeying step by step', ch: 'Soccer Drills For You', s: 78 },
   ],
   f_shadow_jockey: [

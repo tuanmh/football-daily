@@ -7,9 +7,11 @@ const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (
 const REF = process.env.CHECK_REFERER || 'https://tuanmh.github.io/';
 
 let ids = process.argv.slice(2);
+const thumbs = new Map();
 if (!ids.length) {
   const { VIDEOS } = await import('../site/js/videos.js');
   ids = [...new Set(Object.values(VIDEOS).flat().map((v) => v.id))];
+  for (const v of Object.values(VIDEOS).flat()) thumbs.set(v.id, v.th === 'hq' ? 'hqdefault' : 'sddefault');
 }
 
 async function check(id) {
@@ -22,6 +24,9 @@ async function check(id) {
     if (!embed) return { id, ok: false, why: 'no player data (removed or private?)' };
     if (embed[1] !== 'true') return { id, ok: false, why: 'embedding disabled by owner' };
     if (status && status[1] !== 'OK') return { id, ok: false, why: `status ${status[1]}` };
+    const q = thumbs.get(id) || 'hqdefault';
+    const th = await fetch(`https://i.ytimg.com/vi/${id}/${q}.jpg`, { method: 'HEAD' });
+    if (!th.ok) return { id, ok: false, why: `no ${q} thumbnail (set th: 'hq' in videos.js)` };
     return { id, ok: true, why: '' };
   } catch (e) {
     return { id, ok: false, why: String(e.message || e) };

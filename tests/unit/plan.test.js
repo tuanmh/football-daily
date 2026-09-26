@@ -276,3 +276,8 @@ test('videos: every drill has at least one kid-level YouTube demo, ids valid, ke
     }
   }
 });
+
+test('videos: th flag is only ever hq', async () => {
+  const { VIDEOS } = await import('../../site/js/videos.js');
+  for (const v of Object.values(VIDEOS).flat()) if ('th' in v) assert.equal(v.th, 'hq');
+});
