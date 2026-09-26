@@ -145,6 +145,7 @@ input::placeholder, textarea::placeholder { color: #5f6a94; font: 400 16px/1.2 v
 .seg label:has(input:focus-visible) { outline: 3px solid var(--volt); outline-offset: 2px; }
 .card { padding: 18px var(--pad); border-radius: var(--radius); background: var(--surface); border: 1px solid var(--line); }
 .card + .card { margin-top: 12px; }
+.card.stack > * + * { margin-top: 18px; }
 
 /* ---------- drill ---------- */
 .back { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; color: var(--muted); text-decoration: none; font-weight: 600; }
