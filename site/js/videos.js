@@ -279,4 +279,198 @@ export const VIDEOS = {
     { id: 'pYpTY2ViK08', t: 'Argentina, the potrero of the world (Spanish)', ch: 'Goal en español', s: 194, th: 'hq' },
     { id: 'nMnVO_ZEF2k', t: 'Baby fútbol finals in Argentina', ch: 'LA GLORIOSA', s: 1423, dad: true },
   ],
+  // ---------- skills & levels ----------
+  sk_ma_feel: [
+    { id: 'MsOVrZB4wRo', t: '10 ball touches, 5 minutes a day (Japanese)', ch: 'サカサポChannel', s: 312 },
+    { id: 'PJ6HKUCFb8k', t: 'Sole ball feeling for kids (Japanese)', ch: 'Fun! サカ', s: 39 },
+    { id: 'zT0t67nNp7s', t: 'V-pull, step-over, outside (Japanese)', ch: 'Fun! サカ', s: 48 },
+  ],
+  sk_ma_speed: [
+    { id: 'b809h9NLp9k', t: 'Beginner ball touches (Japanese)', ch: 'こちょわーるどサッカー', s: 193 },
+    { id: 'ytyvl44Z4II', t: '22 ball touches, anywhere (Japanese)', ch: '稲田 瑞穂', s: 150 },
+  ],
+  sk_ma_pisar: [
+    { id: 'Swm7m5u6H8g', t: 'Using the sole, futsal style (Spanish)', ch: 'DT Gabriel Villalba', s: 201 },
+    { id: 'INC083ZCMdU', t: 'Sole rolls', ch: 'Football DNA', s: 46 },
+  ],
+  sk_ma_keep: [
+    { id: 'XAPe56hVvGQ', t: 'Shielding the ball', ch: 'SportVideos', s: 104 },
+    { id: 'yPPgXnTqtfI', t: 'Protect the ball against bigger players', ch: 'Unisport', s: 258 },
+    { id: 'mVN3UwXqfpQ', t: 'Keeping the ball in tight spaces', ch: 'Keepitonthedeck', s: 118, dad: true },
+  ],
+  sk_st_dead: [
+    { id: 'cF2FahTpHgg', t: 'A coach\'s trap practice (Japanese)', ch: 'FSCサッカースクール', s: 51, th: 'hq' },
+    { id: 'v-8_W3YLneU', t: 'Dead-stop trap (Japanese)', ch: 'ぱんだ兄弟 Panda bros.', s: 391, dad: true },
+    { id: 'MLvW_K6YioQ', t: 'Why the ball won\'t stop, and the fix (Japanese)', ch: 'やまね@サカステ', s: 452, dad: true },
+  ],
+  sk_st_away: [
+    { id: 'LPCGqOC7vU4', t: '3 first touches to face forward (Japanese)', ch: 'REGATEドリブル塾', s: 204 },
+    { id: 'ViBAxnQ9280', t: 'Directional first touch (Japanese)', ch: 'COACH UNITED', s: 59 },
+  ],
+  sk_st_press: [
+    { id: 'LYmPykkfsQI', t: 'First touch, 1v1, 2v1', ch: 'Coach Thomas Vlaminck', s: 103 },
+    { id: 'O4v-o1xeco0', t: '7 first-touch drills', ch: 'AD Football Training', s: 218 },
+  ],
+  sk_pa_inside: [
+    { id: 'oPWNO6rMJAM', t: 'Inside-foot kick: Yokohama F. Marinos coach (Japanese)', ch: 'Yokohama F. Marinos', s: 179 },
+    { id: 'hEXXbeiVsoA', t: 'Teaching the inside kick to beginners (Japanese)', ch: 'SOLUNA Ch.', s: 391, dad: true },
+  ],
+  sk_pa_one: [
+    { id: 'EMIQhtHknPg', t: 'One-touch passing', ch: 'Global Futbol Training', s: 26 },
+    { id: 'sLZKGriQoXE', t: 'One-touch follow passing', ch: 'SoccerDrive', s: 30, th: 'hq' },
+  ],
+  sk_pa_move: [
+    { id: 'EDJKPs2Qcag', t: 'Pass & move for U9 to U12', ch: 'KS Performance', s: 115 },
+    { id: '6aOXaCcmDdA', t: 'Quick passes and movement (Spanish)', ch: 'BaseFútbol', s: 76 },
+    { id: 'tlAuB13vGPY', t: 'Pass & move patterns', ch: 'Harrow United', s: 213, dad: true },
+  ],
+  sk_pa_gates: [
+    { id: 'gWifEuhXt0A', t: 'Passing through gates', ch: 'i play! afterschool', s: 158 },
+  ],
+  sk_ca_laces: [
+    { id: 'fmxn5QNPMJU', t: 'Kawasaki Frontale U-10: carrying the ball 1 (Japanese)', ch: 'COACH UNITED', s: 84 },
+    { id: 'jnJ_OcYNvjQ', t: 'Kawasaki Frontale U-10: carrying the ball 2 (Japanese)', ch: 'COACH UNITED', s: 42 },
+    { id: 'eq4GNr3HaM4', t: 'Kawasaki Frontale U-10: carrying the ball 3', ch: 'COACH UNITED', s: 49 },
+  ],
+  sk_ca_stopgo: [
+    { id: 'loXlmv_13vU', t: 'The stop & go', ch: 'tomthom11', s: 44 },
+    { id: '7z0GQ0IC6u8', t: 'Stop and go dribbling move', ch: 'SoccerCoachTV', s: 243, dad: true },
+  ],
+  sk_ca_space: [
+    { id: 'tbpSTj2ubsY', t: 'Kawasaki Frontale U-10: dribble to move forward', ch: 'COACH UNITED', s: 84 },
+  ],
+  sk_ca_gates: [
+    { id: 'GajIbRgBUzU', t: 'Gate dribbling game', ch: 'Total Tech Soccer', s: 48 },
+    { id: 'kmmDtmfgos0', t: '1v1 dribbling: attack and defend', ch: 'Professional Soccer Coaching', s: 199 },
+  ],
+  sk_be_turns: [
+    { id: 'hhOaMUKkK48', t: 'U9 dribbling turns', ch: 'Alliance Athletics', s: 102 },
+    { id: 'AlMwNGOmkwA', t: 'Inside and outside cut', ch: 'JustPlayCleats', s: 75 },
+    { id: 'LRSUw7mgqAY', t: 'The Cruyff turn', ch: 'Unisport', s: 246 },
+  ],
+  sk_be_scissors: [
+    { id: 'AYr8WXr0teQ', t: 'Scissors: 3 tips for kids (Japanese)', ch: 'VIRDSフットボールアカデミー', s: 166 },
+    { id: 'bTHP6ru1LgU', t: 'Scissors basics (Japanese)', ch: 'サッカー上達アカデミーTV', s: 96 },
+  ],
+  sk_be_weight: [
+    { id: 'fCsso2BmcC8', t: 'Moving his weight to beat him (Japanese)', ch: 'T.V R.W.Sドリブル', s: 220 },
+    { id: '-7Oj6PsUL1I', t: 'Face forward and beat him (Japanese)', ch: 'T.V R.W.Sドリブル', s: 207 },
+    { id: 'YF3w63CN54A', t: 'Shift his weight and you win (Japanese)', ch: 'T.V R.W.Sドリブル', s: 637, dad: true },
+  ],
+  sk_be_1v1: [
+    { id: 'BFtJWmAQe5s', t: '1v1 with side gates', ch: 'PLAYER DEVELPMENT', s: 52 },
+    { id: 'kmmDtmfgos0', t: '1v1 dribbling: attack and defend', ch: 'Professional Soccer Coaching', s: 199 },
+  ],
+  sk_fi_laces: [
+    { id: 'zKjgczUU8Aw', t: 'Laces kick for young kids (Japanese)', ch: 'サイテレビ', s: 254 },
+    { id: '0LqafH_U3T8', t: 'A stronger laces kick (Japanese)', ch: 'サカイク編集部', s: 223 },
+  ],
+  sk_fi_corners: [
+    { id: 'qIbWX_hisKY', t: 'Aim for the open corner (Japanese)', ch: 'Sakakenサッカー研究会改', s: 269 },
+    { id: '_f9ZIh8ESn4', t: 'Shooting: 5 basic tips', ch: 'Unisport', s: 248 },
+  ],
+  sk_fi_turn: [
+    { id: 'k-dpcfQMwC8', t: 'Turn & shoot for U8 to U10', ch: 'KS Performance', s: 182 },
+    { id: 'BrWrF-0lA00', t: 'Shooting past a defender (Japanese)', ch: 'SOLUNA Ch.', s: 131 },
+  ],
+  sk_fi_1v1gk: [
+    { id: 'y-X_t1KVO7o', t: '1v1 and 2v1 finishing', ch: 'AD Football Training', s: 125 },
+    { id: 'Ae378adY2rI', t: 'Finishing 1v1 with the keeper', ch: 'Rushmoor Community FC', s: 803, dad: true },
+  ],
+  sk_mo_coord: [
+    { id: 'tMs3TQqxbug', t: '10 ball coordination moves (Japanese)', ch: '鎌田豊', s: 28 },
+    { id: 'Z9460InsMUY', t: 'Coordination for young players (Japanese)', ch: 'SOLUNA Ch.', s: 198 },
+    { id: 'jGNoC-JgsEg', t: 'Pair ball handling (coordination)', ch: 'FRAKIDS', s: 259 },
+  ],
+  sk_mo_feet: [
+    { id: 'bp6vuy7ai7A', t: 'Line steps for kids (Japanese)', ch: 'KSS SOCCER SCHOOL', s: 23 },
+    { id: 'VchxPuX24HY', t: '10 agility drills at home, no kit', ch: 'Progressive Soccer', s: 139 },
+    { id: 'd01bxcf-VhQ', t: '5 fast-feet exercises', ch: 'Prolific Soccer', s: 213 },
+  ],
+  sk_mo_react: [
+    { id: 'nGKsL7XcEgc', t: 'Reaction and speed drill', ch: 'White Eagles Calgary', s: 23 },
+    { id: 'VX5vKQRPZdQ', t: 'Colours reaction drill', ch: 'Sean Buckley', s: 203 },
+    { id: 'plpnPCCDvR4', t: '3 minutes of quickness (Japanese)', ch: 'サカサポChannel', s: 196 },
+  ],
+  sk_mo_mirror: [
+    { id: 't3UjPq-RcnE', t: 'Partner mirror drill', ch: 'SPIDERfit Kids', s: 109 },
+    { id: 'Qnikzh0tQas', t: 'Mirror game', ch: 'Casey Wheel', s: 17 },
+  ],
+  sk_de_steal: [
+    { id: 'ncjaEX2RO54', t: 'Use your body to steal the ball', ch: 'Kang channel', s: 399 },
+    { id: 'Dg8ISMeDFeo', t: 'From soft defending to winning it (Japanese)', ch: 'ぱんだ兄弟 Panda bros.', s: 494, dad: true },
+  ],
+  sk_de_duel: [
+    { id: 'pLrx6ci-0zA', t: '1v1 for grassroots', ch: 'D.T. Nazir Zelada', s: 86 },
+    { id: 'n18x1k1zb-s', t: 'Duels (Spanish)', ch: 'Deportivo Mac Allister', s: 105 },
+    { id: 'ZSHzqOsjUBY', t: '1v1 defending rules (Japanese)', ch: 'キングデュオ-サッカーTV', s: 519, dad: true },
+  ],
+  sk_gk_wall: [
+    { id: 'NqZ3Zp6dDNQ', t: 'Keeper catching at home', ch: 'Little Messys Football', s: 160 },
+    { id: 'UFyX6ZEHYcI', t: 'Kids\' goalkeeping: catching', ch: 'Coach Dannys', s: 54 },
+    { id: '9d04nOhCEZ4', t: 'Catching practice (Japanese)', ch: 'サカイク編集部', s: 52 },
+  ],
+  sk_gk_shuffle: [
+    { id: 'yjk94YHKU-g', t: 'Pop, shuffle and catch', ch: 'Coaching Media Group', s: 70 },
+    { id: '5qcF3BvEcEI', t: 'Keeper mini shuffle', ch: 'Golden Gloves Goalkeeping', s: 44 },
+  ],
+  sk_gk_game: [
+    { id: 'BHsPdQ7EnZM', t: '7 fun keeper drills for U5 to U10', ch: 'Eddie10', s: 226 },
+    { id: 'gFXR2ex48lo', t: 'Dad as keeper coach: catching basics (Japanese)', ch: 'ノグチno着眼点。', s: 136, dad: true },
+  ],
+  sk_lo_fingers: [
+    { id: 'HlLnqEnajXI', t: 'Lamine Yamal, 16: 7 looks in 5 seconds', ch: 'Promeses FA / FC Daura', s: 26 },
+    { id: 'NBEANec0eRg', t: 'Scanning and reaction', ch: 'Heads Up STS', s: 37 },
+    { id: 'AW5jOc1DCGI', t: 'When and how to look (Japanese)', ch: '谷田部', s: 311, dad: true },
+  ],
+  sk_lo_twice: [
+    { id: '7oyG-3f9WwU', t: 'The scanning game', ch: 'Fast Feet Football Academy', s: 374 },
+    { id: 'A7YR73ALZ1s', t: 'Check your shoulder: scan drill', ch: 'KS Performance', s: 125 },
+    { id: 'vB0sEv4HTZw', t: 'Timing your looks (Japanese)', ch: '谷田部', s: 237, dad: true },
+  ],
+  sk_gf_check: [
+    { id: 'jNiEE8odWCo', t: 'Get free to receive (Japanese)', ch: 'SOLUNA Ch.', s: 263 },
+    { id: 'mA_0AkFK6i0', t: 'Teach a child to get free and wall-pass (Spanish)', ch: 'Cheme Alejandro', s: 99 },
+  ],
+  sk_gf_lose: [
+    { id: 'A_HV-n621Qs', t: 'Lose your marker and receive (Japanese)', ch: 'SOLUNA Ch.', s: 163 },
+    { id: 'sxBW2BR4688', t: 'Losing your marker: 1v1 and 2v2 (Japanese)', ch: 'SOLUNA Ch.', s: 186 },
+    { id: 'GQ8rzuwJSKo', t: 'Movement to lose a marker (Japanese)', ch: 'REGATEドリブル塾', s: 400, dad: true },
+  ],
+  sk_gf_wall: [
+    { id: 'mA_0AkFK6i0', t: 'Teach a child to get free and wall-pass (Spanish)', ch: 'Cheme Alejandro', s: 99 },
+    { id: '30JFcrh7EiA', t: '3 quick combination drills (Spanish)', ch: 'BaseFútbol', s: 104 },
+  ],
+  sk_wb_react: [
+    { id: 'iDGJ_Ac4FEE', t: 'Transition game: 3v2 to 1v1 (Spanish)', ch: 'Coaching futbol', s: 21 },
+    { id: 'FRgxVfTWZE4', t: 'Drills for effort and intensity', ch: 'Progressive Soccer', s: 284 },
+  ],
+  sk_wb_game: [
+    { id: 'GzUwGD5bZlQ', t: '3v3: press as a team', ch: 'KS Performance', s: 87 },
+    { id: 'IHeUKdsVHHg', t: 'Press and cover', ch: 'KS Performance', s: 103 },
+  ],
+  sk_ma_twoball: [
+    { id: 'Vkt6jujaeeE', t: '1-touch bounce juggling', ch: 'tomthom11', s: 27 },
+    { id: 'RjNYNnEBb7A', t: 'One-bounce juggling', ch: 'CCF Football', s: 52 },
+  ],
+  sk_ma_follow: [
+    { id: 'MQ6pYNSFc-8', t: 'Ball mastery: 10-minute follow-along', ch: '365 Ball', s: 639 },
+    { id: 'cB52z9GMbpk', t: 'Basic ball mastery for kids', ch: 'Fast Feet Home Soccer', s: 469 },
+  ],
+  sk_st_air: [
+    { id: 's7bgsTgU6Uo', t: 'Controlling a high ball (Japanese)', ch: 'REGATEドリブル塾', s: 480 },
+    { id: 'LQ_b-mK5pFo', t: 'Stop a bouncing ball under your foot (Japanese)', ch: 'サカイク編集部', s: 135 },
+  ],
+  sk_ca_race: [
+    { id: 'wvFyTDkOKzc', t: 'Fun dribbling race: 4 versions', ch: 'Coach Thomas Vlaminck', s: 209 },
+    { id: 'rwLrbyJWSIY', t: '5 fun dribbling drills for kids', ch: 'Onside - Training', s: 246 },
+  ],
+  sk_fi_bounce: [
+    { id: 'kagAbJylIRs', t: 'A stronger shot, even for kids (Japanese)', ch: 'TORIDENTEストライカースクール', s: 243 },
+    { id: 'WYdbdvIvgYw', t: '2 ways to score more goals', ch: 'REGATEドリブル塾', s: 330 },
+  ],
+  sk_lo_numbers: [
+    { id: '_es81j0GoBI', t: 'Awareness: numbers and colours', ch: 'Sean Baumann', s: 601, dad: true },
+    { id: '4cM5xAtmV5E', t: 'Ball control and body coordination for kids', ch: 'Fun! サカ', s: 42 },
+  ],
 };

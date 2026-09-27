@@ -7,14 +7,15 @@ Static site (HTML, CSS, JavaScript modules, no build step), hosted on GitHub Pag
 ## What's in it
 
 - **Today**: the plan for today, based on Dad's weekly schedule.
-  - **Home day**: Daily 3 (Bounce, Touch, Look) + this week's focus drill + 2 drills from the day's theme (Master, Pass, Brain, Defend, Strike). About 18–22 min.
-  - **Role day** (the last home day before the game, once a week): Daily 3 + 2 drills for this week's role + 3 role pictures, with the "My job" card. It replaces a theme day, so the week is no longer.
+  - **Skill day** (home day): Daily 3 (Bounce, Touch, Look) + this week's focus drill + 1 drill for a ball skill + 1 for a body or head skill, each at the level he is on. About 18–22 min.
+  - **Role day** (the last home day before the game, once a week): Daily 3 + 2 drills for this week's role + 3 role pictures, with the "My job" card. It replaces a skill day, so the week is no longer.
   - **Team training day**: Daily 3 only (about 8 min).
   - **Day before a game**: Daily 3 + this week's role pictures + the "My job" card (light).
   - **Game day**: "Today you play" job card, warm-up, then after the game: what went well, one fix, and "Did you do your job?".
   - **Rest day**: rest. Rest and game days never break the streak.
+- **Skills & levels**: 12 skills in 3 groups, distilled from Spanish, Japanese and Argentine academies. Ball: Ball mastery, Stop the ball, Pass, Carry, Beat a player, Finish. Body: Move well, Defend 1v1, Keeper hands. Head: Look, Get free, Win it back. Each skill has 4 levels (1 Learn it: alone, slow, both feet · 2 Speed it up: faster, head up · 3 Beat Dad: a live defender, half speed first · 4 Play it: a small game) with 1–4 drills and a pass test. Dad ticks a level when he passes; skill days then move to the next level. Carry and Beat a player come round twice as often (Japan's U-10 priority). The Skills page lists each academy lesson, what the app does with it, and the source.
 - **Roles 9v9**: 6 roles for a 3-2-3 (keeper, centre back, wide defender, midfield, winger, striker). Each has a 3-line "My job" card (our ball / their ball / loose ball), 3 drills tagged 🇪🇸/🇯🇵/🇦🇷 with the reason, 5 pitch pictures, a "watch a pro" tip and a badge. All six badges, keeper included, makes an All-rounder. The role of the week rotates through all six; Dad can set "Saturday he plays ___" for any week.
-- **Drills**: 18 areas (the 17 below plus Roles 9v9). The 8 tft-tube areas (Agility, Control & Pass, Ball Mastery, Drag Back Vs, Footwork, Juggling, Spring Rebounder, Wall Work) link to the videos on [tft-tube.com](https://tft-tube.com/) (free login). 9 more areas for the game around the ball: Look & Decide, Game Brain, Where do I go?, Defending, Second Ball, 1v1 & Running with the ball, Shooting, Weak Foot, Warm-up & Recovery.
+- **Drills**: 113 drills. 20 tiles: Skills & levels, 18 areas, Roles 9v9. The 8 tft-tube areas (Agility, Control & Pass, Ball Mastery, Drag Back Vs, Footwork, Juggling, Spring Rebounder, Wall Work) link to the videos on [tft-tube.com](https://tft-tube.com/) (free login). 9 more areas for the game around the ball: Look & Decide, Game Brain, Where do I go?, Defending, Second Ball, 1v1 & Running with the ball, Shooting, Weak Foot, Warm-up & Recovery.
 - **Coach mode**: full-screen colours, numbers, arrows, "Our ball / Their ball / Keeper's ball", "Turn / Man on" or "Feet / In behind" calls (spoken aloud), for scanning and reaction drills.
 - **Brain**: Pause & pick. 42 pitch pictures (12 general + 30 for the roles, filter by role), pick the right move, see why. Wrong answers come back later. Attacking pictures flip so we always attack up the screen.
 - **Records**: juggling, toe taps, wall passes, weak-foot passes, slalom, shots on target, with belts (White to Black) and trend lines. Game reflections.
@@ -24,7 +25,7 @@ Drills that need kit he doesn't have swap automatically to one that doesn't.
 
 ## Videos
 
-Every drill has 1–3 short YouTube demos under **Watch how** (117 videos). Most are short clips from Japanese and Spanish youth coaching channels, club academies (e.g. Kawasaki Frontale, Real Madrid Foundation), FIFA 11+ Kids and other coaching channels. Longer explainers are tagged **For Dad**.
+Every drill has 1–3 short YouTube demos under **Watch how** (214 videos). Most are short clips from Japanese and Spanish youth coaching channels, club academies (e.g. Kawasaki Frontale, Real Madrid Foundation), FIFA 11+ Kids and other coaching channels. Longer explainers are tagged **For Dad**.
 
 - Played with `youtube-nocookie.com` embeds. The iframe loads only when he taps play, so nothing from YouTube loads until then. Nothing is downloaded or re-hosted, and each card credits the channel and links to YouTube.
 - The list is in `site/js/videos.js` (drill id → videos). Swap or add an id there.
@@ -40,6 +41,7 @@ The focus rotates weekly and the role of the week rotates separately. The defaul
 - Keeper dives only on grass or a soft surface.
 - Load check: fewer organised hours per week than his age, with 1–2 days off ([AAP](https://publications.aap.org/pediatrics/article/119/6/1242/70751/)).
 - Roles follow Spanish, Japanese and Argentine academy guidance: don't fix positions at this age, every child plays every role including keeper (Japan FA; Spanish benjamín model), carrying the ball and 1v1 come first at U-10 (Kawasaki Frontale; Argentine baby fútbol), technique stays the base. Sources are listed on the Roles page in the app and in `site/js/roles.js`.
+- Skills: the lessons, levels and sources are in `site/js/skills.js` (`PRINCIPLES`, `SKILLS`, `LEVELS`). Level 3 and 4 games with Dad start at half speed.
 - Belt targets are starter goals for home practice, not age norms.
 - tft-tube videos are linked, not copied. YouTube videos are embedded from their channels, not copied.
 

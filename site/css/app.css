@@ -238,6 +238,7 @@ input::placeholder, textarea::placeholder { color: #5f6a94; font: 400 16px/1.2 v
 .rec + .rec { margin-top: 10px; }
 .rec .best { font: 700 40px/1 var(--display); }
 .rec .best small { font-size: 18px; color: var(--muted); margin-left: 4px; }
+.rec .best + .small { margin-top: 8px; }
 .belt { display: inline-flex; align-items: center; gap: 8px; font: 600 15px/1 var(--display); letter-spacing: .06em; text-transform: uppercase; }
 .belt i { width: 30px; height: 10px; border-radius: 3px; border: 1px solid rgba(255,255,255,.35); display: inline-block; }
 .spark { display: block; width: 100%; height: 44px; margin-top: 10px; }
@@ -350,3 +351,41 @@ input::placeholder, textarea::placeholder { color: #5f6a94; font: 400 16px/1.2 v
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
+
+/* ---------- skills & levels ---------- */
+.plan .slot.skill-slot { color: #8fd3ff; }
+.tile.skills { grid-column: 1 / -1; min-height: 92px; background: linear-gradient(135deg, #123f3a, var(--surface)); }
+.tile.skills::before { background: #8fd3ff; }
+.pips { display: inline-flex; gap: 4px; vertical-align: middle; }
+.pips i { width: 14px; height: 6px; border-radius: 3px; background: #2e3a6b; }
+.pips i.on { background: var(--good); }
+.pips i.now { background: rgba(143,211,255,.35); box-shadow: inset 0 0 0 1.5px #8fd3ff; }
+.skill-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.skill-chips a { display: inline-flex; align-items: center; gap: 8px; min-height: 38px; padding: 0 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); color: var(--ink); font-weight: 600; font-size: 14px; text-decoration: none; }
+.skill-card { height: 100%; box-sizing: border-box; display: flex; gap: 10px; align-items: center; min-height: 72px; padding: 12px; border-radius: var(--radius-sm); background: var(--surface); border: 1px solid var(--line); color: var(--ink); text-decoration: none; }
+.skill-card .rc-icon { font-size: 24px; }
+.skill-card .rc-name { display: block; font: 700 19px/1.05 var(--display); text-transform: uppercase; }
+.skill-card .rc-meta { display: block; font-size: 13px; color: var(--muted); margin: 3px 0 6px; }
+.level-key { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+.level-key li { display: grid; grid-template-columns: 110px 1fr; gap: 10px; padding: 8px 12px; border-radius: var(--radius-sm); background: var(--surface); font-size: 15px; }
+.level-card { margin-top: 14px; padding: 14px var(--pad); border-radius: var(--radius); background: var(--surface); border: 1px solid var(--line); }
+.level-card h3 { font: 700 20px/1.1 var(--display); text-transform: uppercase; }
+.level-card .drill-list { margin-top: 8px; }
+.level-card.now { border-color: #8fd3ff; box-shadow: inset 0 0 0 1px #8fd3ff; }
+.level-card.done { border-color: var(--good); }
+.level-card.done .name { color: var(--ink); text-decoration: none; }
+.level-card.done .name::after { content: ' ✓'; color: var(--good); }
+.lv-state { font: 700 14px/1 var(--display); letter-spacing: .1em; text-transform: uppercase; white-space: nowrap; }
+.level-card.done .lv-state { color: var(--good); }
+.level-card.now .lv-state { color: #8fd3ff; }
+.level-card.later { opacity: .72; }
+.pass-test { margin-top: 10px; font-size: 15px; }
+.good { color: var(--good); }
+.skill-of { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; font-size: 14px; color: var(--muted); align-items: center; }
+.skill-of a { color: #8fd3ff; font-weight: 600; text-decoration: none; }
+.principles { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.principles li { display: flex; gap: 10px; align-items: flex-start; padding: 10px 14px; border-radius: var(--radius-sm); background: var(--surface); border: 1px solid var(--line); font-size: 15px; line-height: 1.4; }
+.principles .flag { font-size: 20px; line-height: 1.2; }
+.principles .how { display: block; margin-top: 4px; color: var(--muted); font-size: 14px; }
+.principles a { display: inline-block; margin-top: 4px; padding: 4px 0; color: var(--volt); font-size: 14px; }
+.safety-list { margin: 0; padding: 14px 16px 14px 34px; display: grid; gap: 4px; border-left: 3px solid var(--warn, #ffb347); }

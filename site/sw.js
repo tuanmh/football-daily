@@ -10,6 +10,7 @@ const ASSETS = [
   './js/storage.js',
   './js/videos.js',
   './js/roles.js',
+  './js/skills.js',
   './manifest.webmanifest',
   './icons/icon.svg',
   './icons/icon-192.png',

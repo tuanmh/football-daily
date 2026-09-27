@@ -193,13 +193,13 @@ test('game day reflection saves and shows on records', async ({ page }) => {
   await expect(page.locator('.reflect-list')).toContainText('felt OK');
 });
 
-test('library: 18 tiles, 8 TFT; every drill page renders', async ({ page }) => {
+test('library: 20 tiles, 8 TFT; every drill page renders', async ({ page }) => {
   await page.goto(at(MON, '#/drills'));
-  await expect(page.getByTestId('tile')).toHaveCount(18);
+  await expect(page.getByTestId('tile')).toHaveCount(20);
   await expect(page.locator('.tile:not(.new)')).toHaveCount(8);
   const hrefs = await page.getByTestId('tile').evaluateAll((els) => els.map((e) => e.getAttribute('href')));
   const drills = new Set();
-  for (const h of hrefs) {
+  for (const h of hrefs.filter((x) => x.startsWith('#/area/'))) {
     await page.goto(at(MON, h));
     const ds = await page.getByTestId('area-drill').evaluateAll((els) => els.map((e) => e.getAttribute('href')));
     expect(ds.length).toBeGreaterThan(0);
@@ -209,7 +209,7 @@ test('library: 18 tiles, 8 TFT; every drill page renders', async ({ page }) => {
     await page.goto(at(MON, d));
     await expect(page.getByTestId('drill-name')).toBeVisible();
   }
-  expect(drills.size).toBeGreaterThan(40);
+  expect(drills.size).toBeGreaterThan(90);
 });
 
 test('streak survives rest day and game day', async ({ page }) => {
@@ -220,7 +220,7 @@ test('streak survives rest day and game day', async ({ page }) => {
 });
 
 test('no horizontal overflow on any main screen', async ({ page }) => {
-  for (const h of ['#/', '#/drills', '#/brain', '#/records', '#/dad', '#/drill/fo_check_receive', '#/after', '#/roles', '#/role/wd', '#/brain?role=st', '#/drill/r_w_mitoma']) {
+  for (const h of ['#/', '#/drills', '#/brain', '#/records', '#/dad', '#/drill/fo_check_receive', '#/after', '#/roles', '#/role/wd', '#/brain?role=st', '#/drill/r_w_mitoma', '#/skills', '#/skill/beat', '#/drill/sk_be_weight?from=sk-beat']) {
     await page.goto(at(MON, h));
     const over = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(over, h).toBeLessThanOrEqual(0);
@@ -250,11 +250,11 @@ test('today plan marks drills with a video; library tiles count videos', async (
   await page.goto(at(MON));
   await expect(page.getByTestId('plan-item').first()).toContainText('video');
   await page.goto(at(MON, '#/drills'));
-  await expect(page.getByTestId('tile').first()).toContainText(/\d+ videos?/);
+  await expect(page.locator('[data-testid=tile]:not(.skills):not(.roles)').first()).toContainText(/\d+ videos?/);
 });
 
 // ---------- roles (9v9) ----------
-test('role day: job card, 2 role drills and role pictures replace a theme day', async ({ page }) => {
+test('role day: job card, 2 role drills and role pictures replace a skill day', async ({ page }) => {
   await page.goto(at(WED));
   await expect(page.getByTestId('day-title')).toHaveText('Role day');
   await expect(page.getByTestId('job-card')).toContainText('Centre back');
@@ -375,4 +375,79 @@ test('completing a role day counts toward the role badge', async ({ page }) => {
   await page.goto(at(WED, '#/role/cb'));
   await expect(page.getByTestId('badge-cb')).toContainText('1/2 role days');
   await expect(page.getByTestId('badge-cb')).toContainText('3/5 pictures');
+});
+
+// ---------- skills & levels ----------
+test('skill day: title, 2 skill chips, a ball skill and a body/head skill at level 1', async ({ page }) => {
+  await page.goto(at(MON));
+  await expect(page.getByTestId('day-title')).toHaveText('Skill day');
+  await expect(page.getByTestId('skill-chips').locator('a')).toHaveCount(2);
+  await expect(page.locator('.plan .slot.skill-slot')).toHaveCount(2);
+  await expect(page.getByTestId('plan-item').nth(4)).toContainText('Level 1');
+});
+
+test('skills page: 12 skills in 3 groups, 4-level key, sourced academy lessons', async ({ page }) => {
+  await page.goto(at(MON, '#/drills'));
+  await page.locator('.tile.skills').click();
+  await expect(page).toHaveURL(/#\/skills$/);
+  await expect(page.getByTestId('skill-card')).toHaveCount(12);
+  await expect(page.locator('.level-key li')).toHaveCount(4);
+  await expect(page.getByTestId('levels-passed')).toHaveText('0');
+  const n = await page.getByTestId('principle').count();
+  expect(n).toBeGreaterThanOrEqual(10);
+  await expect(page.getByTestId('principles')).toContainText('Mitoma');
+  await expect(page.locator('.principles a[href*="footballaustralia"]')).toHaveCount(0);
+  await expect(page.locator('.principles')).not.toContainText(/heading/i);
+});
+
+test('skill page: pass level 1, level 2 becomes Now, skill day trains level 2, undo', async ({ page }) => {
+  await page.goto(at(MON, '#/skill/carry'));
+  await expect(page.getByTestId('skill-name')).toContainText('Carry');
+  for (const n of [1, 2, 3, 4]) await expect(page.getByTestId(`level-${n}`)).toBeVisible();
+  await expect(page.getByTestId('level-1')).toHaveClass(/now/);
+  await expect(page.getByTestId('level-drill').first()).toBeVisible();
+  await page.getByTestId('pass-level').click();
+  await expect(page.getByTestId('level-1')).toHaveClass(/done/);
+  await expect(page.getByTestId('level-2')).toHaveClass(/now/);
+  // Dad sets carry as this week's only skill: both drills come from level 2
+  await page.goto(at(MON, '#/dad'));
+  await page.getByTestId('skill-select').selectOption('carry');
+  await page.goto(at(MON));
+  await expect(page.locator('.plan .slot.skill-slot')).toHaveCount(2);
+  await expect(page.getByTestId('plan-item').nth(4)).toContainText('Level 2');
+  await expect(page.getByTestId('skill-chips').locator('a')).toHaveCount(1);
+  await page.goto(at(MON, '#/records'));
+  await expect(page.getByTestId('skills-card')).toContainText('1');
+  await page.goto(at(MON, '#/skill/carry'));
+  await page.getByTestId('unpass-level').click();
+  await expect(page.getByTestId('level-1')).toHaveClass(/now/);
+});
+
+test('skill drill: back to its skill, shows its skill and level, Done returns to the skill', async ({ page }) => {
+  await page.goto(at(MON, '#/skill/beat'));
+  await page.getByTestId('level-drill').first().click();
+  await expect(page.getByTestId('drill-name')).toBeVisible();
+  await expect(page.locator('a.back')).toHaveText('Beat a player');
+  await expect(page.getByTestId('skill-of')).toContainText('Beat a player · Level 1');
+  await expect(page.getByTestId('video').first()).toBeVisible();
+  await page.getByTestId('done-btn').click();
+  await expect(page).toHaveURL(/#\/skill\/beat$/);
+});
+
+test('every skill page and every level drill renders', async ({ page }) => {
+  await page.goto(at(MON, '#/skills'));
+  const skills = await page.getByTestId('skill-card').evaluateAll((els) => els.map((e) => e.getAttribute('href')));
+  expect(skills.length).toBe(12);
+  const drills = new Set();
+  for (const h of skills) {
+    await page.goto(at(MON, h));
+    await expect(page.getByTestId('pass-level')).toHaveCount(1);
+    (await page.getByTestId('level-drill').evaluateAll((els) => els.map((e) => e.getAttribute('href')))).forEach((d) => drills.add(d));
+  }
+  for (const d of drills) {
+    await page.goto(at(MON, d));
+    await expect(page.getByTestId('drill-name')).toBeVisible();
+    await expect(page.getByTestId('skill-of')).toBeVisible();
+  }
+  expect(drills.size).toBeGreaterThan(80);
 });

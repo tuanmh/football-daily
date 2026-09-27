@@ -40,6 +40,14 @@ function videoSection(list, title = 'Watch how') {
 }
 const NEED_LABEL = { wall: 'a wall', rebounder: 'a rebounder', partner: 'Dad' };
 const roleOf = (id) => D.ROLES[id] || null;
+const skillOf = (id) => D.SKILLS[id] || null;
+const levelName = (n) => D.LEVELS[n - 1].name;
+const pips = (passed, now = 0) => `<span class="pips" aria-label="${passed} of 4 levels passed">${[1, 2, 3, 4].map((n) => `<i class="${n <= passed ? 'on' : n === now ? 'now' : ''}"></i>`).join('')}</span>`;
+function skillLinks(drillId) {
+  const list = D.DRILL_SKILLS[drillId] || [];
+  if (!list.length) return '';
+  return `<p class="skill-of" data-testid="skill-of">Skill: ${list.map(({ skill, level }) => `<a href="#/skill/${skill}">${D.SKILLS[skill].icon} ${esc(D.SKILLS[skill].name)} · Level ${level}</a>`).join(' ')}</p>`;
+}
 const refTag = (d) => (d.ref && D.REFS[d.ref] ? `<p class="ref-tag" data-testid="ref-tag"><span class="flag" aria-hidden="true">${D.REFS[d.ref].flag}</span><span><b>From ${esc(D.REFS[d.ref].name)}.</b> ${esc(d.why || '')}</span></p>` : '');
 function jobCard(roleId, title = 'My job', link = true) {
   const r = roleOf(roleId);
@@ -233,10 +241,10 @@ function planItem(b, log) {
   const d = D.DRILLS[b.drill];
   const done = log.includes(b.drill);
   const area = areaOf(d.area);
-  const cls = b.slot === 'Focus' ? 'focus' : (b.slot === 'Brain' ? 'brain-slot' : (b.slot === 'Role' ? 'role-slot' : ''));
+  const cls = b.slot === 'Focus' ? 'focus' : (b.slot === 'Brain' ? 'brain-slot' : (b.slot === 'Role' ? 'role-slot' : (b.skill ? 'skill-slot' : '')));
   return `<li class="${done ? 'done' : ''}"><a href="#/drill/${b.drill}" data-testid="plan-item" data-drill="${b.drill}">
     <span class="slot ${cls}">${esc(b.slot)}</span>
-    <span><span class="name">${esc(d.name)}</span><span class="meta">${d.mins} min · ${esc(area.name)}${kidVideos(b.drill).length ? ' · ▶ video' : (tftFor(d) ? ' · TFT video' : '')}</span></span>
+    <span><span class="name">${esc(d.name)}</span><span class="meta">${d.mins} min · ${b.skill ? `Level ${b.level}` : esc(area.name)}${kidVideos(b.drill).length ? ' · ▶ video' : (tftFor(d) ? ' · TFT video' : '')}</span></span>
     <span class="check" role="img" aria-label="${done ? 'Done' : 'Not done yet'}"></span></a></li>`;
 }
 
@@ -274,13 +282,14 @@ function viewToday() {
       </div>`;
   }
 
-  const theme = s.theme ? D.THEMES.find((t) => t.id === s.theme) : null;
+  const sks = s.skills.map((id, i) => ({ k: D.SKILLS[id], lv: s.levels[i] }));
   const role = roleOf(s.role);
   const sub = s.type === 'team' ? 'Team training today, so just the Daily 3'
     : s.type === 'light' ? `Game tomorrow, so keep it light: Daily 3 and ${role.name.toLowerCase()} pictures`
       : s.roleDay ? `Daily 3, 2 ${role.name.toLowerCase()} drills, then 3 pictures`
-        : `Daily 3, this week's focus, then 2 ${theme.name} drills`;
-  const title = s.type === 'full' ? (s.roleDay ? 'Role day' : `${esc(theme.name)} day`) : s.type === 'team' ? 'Team day' : 'Light day';
+        : `Daily 3, this week's focus, then ${sks.map((x) => `${x.k.name.toLowerCase()} level ${x.lv}`).join(' and ')}`;
+  const title = s.type === 'full' ? (s.roleDay ? 'Role day' : 'Skill day') : s.type === 'team' ? 'Team day' : 'Light day';
+  const chips = sks.length ? `<p class="skill-chips" data-testid="skill-chips">${sks.map((x) => `<a href="#/skill/${x.k.id}">${x.k.icon} ${esc(x.k.name)} ${pips(P.levelsPassed(x.k.id, st), x.lv)}</a>`).join('')}</p>` : '';
   const job = s.roleDay || s.type === 'light' ? jobCard(s.role, 'Saturday you play') : '';
   const next = s.blocks.find((b) => !log.includes(b.drill));
   const anyDone = s.blocks.some((b) => log.includes(b.drill));
@@ -289,7 +298,7 @@ function viewToday() {
     : `<section class="all-done" data-testid="all-done"><h2>Done for today</h2><p style="margin-top:6px">Streak: ${plural(streak, 'day')}. See you tomorrow.</p><p style="margin-top:12px"><a href="#/records">Log a record</a></p></section>`;
   return `${head}${band}${setup}${job}
     <div class="section spread"><h2 data-testid="day-title">${title}</h2><span class="muted" data-testid="minutes">about ${s.minutes} min</span></div>
-    <p class="muted small" style="margin-top:4px">${esc(sub)}</p>
+    <p class="muted small" style="margin-top:4px">${esc(sub)}</p>${chips}
     <ul class="plan" data-testid="plan">${s.blocks.map((b) => planItem(b, log)).join('')}</ul>${cta}`;
 }
 
@@ -311,9 +320,11 @@ function viewDrill(id, from) {
   const s = P.buildSession(todayKey(), state.settings);
   const block = s.blocks.find((b) => b.drill === id);
   const done = doneToday().includes(id);
-  const lib = from === 'lib' || from === 'role';
-  const back = from === 'role' ? (d.role ? `<a class="back" href="#/role/${d.role}">${esc(roleOf(d.role).name)}</a>` : '<a class="back" href="#/roles">Roles</a>')
-    : lib ? `<a class="back" href="#/area/${d.area}">${esc(area.name)}</a>` : '<a class="back" href="#/">Today</a>';
+  const fromSkill = from && from.startsWith('sk-') && skillOf(from.slice(3)) ? from.slice(3) : null;
+  const lib = from === 'lib' || from === 'role' || !!fromSkill;
+  const back = fromSkill ? `<a class="back" href="#/skill/${fromSkill}">${esc(skillOf(fromSkill).name)}</a>`
+    : from === 'role' ? (d.role ? `<a class="back" href="#/role/${d.role}">${esc(roleOf(d.role).name)}</a>` : '<a class="back" href="#/roles">Roles</a>')
+      : lib ? `<a class="back" href="#/area/${d.area}">${esc(area.name)}</a>` : '<a class="back" href="#/">Today</a>';
   const where = d.role ? `${roleOf(d.role).icon} ${roleOf(d.role).name}` : area.name;
   const tft = tftFor(d);
   const secs = d.mins * 60;
@@ -338,9 +349,10 @@ function viewDrill(id, from) {
         <button class="btn primary" data-testid="save-score">Save</button></form></section>`;
   }
   return `${back}
-    <header class="drill-head"><p class="eyebrow">${block ? esc(block.slot) + ' · ' : ''}${esc(where)} · ${d.mins} min</p>
+    <header class="drill-head"><p class="eyebrow">${block ? esc(block.slot) + (block.skill ? ` level ${block.level}` : '') + ' · ' : ''}${esc(where)} · ${d.mins} min</p>
       <h1 data-testid="drill-name">${esc(d.name)}</h1><p class="drill-cue" data-testid="drill-cue">${esc(d.cue)}</p></header>
     ${refTag(d)}
+    ${skillLinks(id)}
     ${missing.length ? `<p class="setup-note">Needs ${missing.map((m) => NEED_LABEL[m]).join(' and ')}. Dad can tick it in the Dad tab if you have it.</p>` : ''}
     <ol class="steps">${d.steps.map((x) => `<li>${esc(x)}</li>`).join('')}</ol>
     ${videoSection(videosFor(id))}
@@ -354,10 +366,10 @@ function viewDrill(id, from) {
 function viewLibrary() {
   const count = (id) => Object.values(D.DRILLS).filter((d) => d.area === id).length;
   const vcount = (id) => new Set(Object.entries(D.DRILLS).filter(([, d]) => d.area === id).flatMap(([k]) => videosFor(k).map((v) => v.id))).size;
-  return `<h1>Drills</h1><p class="muted" style="margin-top:8px">${D.AREAS.length} areas. Tap one to see its drills. Roles 9v9 has the drills for each position.</p>
+  return `<h1>Drills</h1><p class="muted" style="margin-top:8px">${Object.keys(D.DRILLS).length} drills in ${D.AREAS.length - 2} areas. Skills &amp; levels shows what to learn next. Roles 9v9 has the drills for each position.</p>
     <div class="legend"><span class="l-tft">tft-tube area</span><span class="l-new">Added for the game around the ball</span></div>
     <p class="small muted" style="margin-top:8px">Every drill has a short YouTube demo. tft-tube areas also link to the TFT videos.</p>
-    <div class="tiles">${D.AREAS.map((a) => `<a class="tile ${a.tft ? '' : 'new'}${a.id === 'roles' ? ' roles' : ''}" href="${a.href || `#/area/${a.id}`}" data-testid="tile"><span class="t-name">${esc(a.name)}</span><span class="t-meta">${plural(count(a.id), 'drill')} · ${plural(vcount(a.id), 'video')}${a.tft ? ' + TFT' : ''}</span></a>`).join('')}</div>`;
+    <div class="tiles">${D.AREAS.map((a) => `<a class="tile ${a.tft ? '' : 'new'}${a.href ? ` ${a.id}` : ''}" href="${a.href || `#/area/${a.id}`}" data-testid="tile"><span class="t-name">${esc(a.name)}</span><span class="t-meta">${a.id === 'skills' ? `${Object.keys(D.SKILLS).length} skills · 4 levels each · ${P.skillsSummary(state.settings).passed} passed` : `${plural(count(a.id), 'drill')} · ${plural(vcount(a.id), 'video')}${a.tft ? ' + TFT' : ''}`}</span></a>`).join('')}</div>`;
 }
 
 function viewArea(id) {
@@ -507,6 +519,7 @@ function viewRecords() {
     <div class="stat-row"><div class="stat"><p class="n" data-testid="stat-streak">${streak}</p><p class="l">Day streak</p></div><div class="stat"><p class="n">${week}</p><p class="l">Done this week</p></div><div class="stat"><p class="n" data-testid="stat-total">${total}</p><p class="l">Sessions ever</p></div></div>
     <div class="section"><h2>Tests</h2><p class="small muted" style="margin:-4px 0 12px">Belts go White, Yellow, Orange, Green, Blue, Purple, Black. They are starter targets for home, not age norms.</p>${recs}</div>
     <div class="section"><h2>Game brain</h2><section class="rec"><div class="spread"><h3>Pause &amp; pick</h3>${bb >= 0 ? `<span class="belt"><i style="background:${D.BELTS[bb].color}"></i>${D.BELTS[bb].name}</span>` : '<span class="belt muted">No belt yet</span>'}</div><p class="best" style="margin-top:6px">${P.brainScore(state.brain)}<small>/ ${D.SCENARIOS.length} right</small></p><p style="margin-top:12px"><a class="btn small" href="#/brain">Play</a></p></section></div>
+    <div class="section"><h2>Skills</h2>${skillsCard()}</div>
     <div class="section"><h2>Role badges</h2>${roleBadges()}</div>
     <div class="section"><h2>After the game</h2>${refl ? `<ul class="reflect-list">${refl}</ul>` : '<p class="muted">Nothing yet. On game day, answer the 3 questions after the game.</p>'}</div>`;
 }
@@ -530,7 +543,7 @@ function roleDayText(key, st) {
 }
 function dayLabel(s) {
   if (s.type === 'full' && s.roleDay) return `Role day: ${D.ROLES[s.role].name} drills + pictures`;
-  if (s.type === 'full') { const t = D.THEMES.find((x) => x.id === s.theme); return `${t.name}: ${t.blurb}`; }
+  if (s.type === 'full') return `Skill day: ${s.skills.map((id, i) => `${D.SKILLS[id].name} L${s.levels[i]}`).join(' + ')}`;
   return { team: 'Team training + Daily 3', light: `Light: Daily 3 + ${D.ROLES[s.role].name.toLowerCase()} pictures`, game: `Game: plays ${D.ROLES[s.role].name.toLowerCase()}`, rest: 'Rest' }[s.type];
 }
 function viewDad() {
@@ -558,6 +571,10 @@ function viewDad() {
       <div class="field"><label for="role">Saturday he plays</label><select id="role" data-set="roleOverride" data-testid="role-select">${opt('auto', `Not sure: rotate (${D.ROLES[P.roleFor(key, { ...st, roleOverride: {} })].name})`, !st.roleOverride[ws])}${D.ROLE_SEQ.map((r) => opt(r, D.ROLES[r].name, st.roleOverride[ws] === r)).join('')}</select></div>
       <p class="small muted">Role day: ${esc(roleDayText(key, st))}. Next weeks: ${[1, 2, 3].map((w) => esc(D.ROLES[P.roleFor(P.addDays(ws, w * 7), st)].name)).join(' → ')}.</p>
       <p class="small muted">9v9 shape 3-2-3. At U10 he should try every role, keeper too.</p></div></div>
+    <div class="section"><h2>Skills &amp; levels</h2><div class="card stack">
+      <div class="field"><label for="skillpick">Skill days this week</label><select id="skillpick" data-set="skillOverride" data-testid="skill-select">${opt('auto', 'Rotate: 1 ball + 1 body/head', !st.skillOverride[ws])}${D.SKILL_SEQ.map((k) => opt(k, `Only ${D.SKILLS[k].name} (level ${P.levelFor(k, st)})`, st.skillOverride[ws] === k)).join('')}</select></div>
+      <p class="small muted">Skill days train the level he's on. When he passes a level's test, tick it on the skill's page and the next level starts.</p><p class="small"><b>${P.skillsSummary(st).passed}&nbsp;of&nbsp;48</b> levels passed.</p>
+      <p><a class="btn small" href="#/skills">Open Skills &amp; levels</a></p></div></div>
     <div class="section"><h2>His week</h2><div class="card week-grid">${sched}</div>
       <p class="small muted" style="margin-top:8px">Team days get the Daily 3 only. The day before a game is light.</p></div>
     <div class="section"><h2>Kit at home</h2><div class="card" style="padding-top:4px;padding-bottom:4px">${kit}</div>
@@ -581,6 +598,7 @@ function viewDad() {
       <li>Videos: <a href="https://tft-tube.com/" target="_blank" rel="noopener">tft-tube.com</a> (Technical Football Tuition). Free login. Links only, nothing copied.</li>
       <li>YouTube demos are embedded from their channels (Japanese and Spanish coaching channels, club academies, FIFA 11+ Kids and others). Channel names are shown under each one. Nothing is downloaded. Videos marked <b>For Dad</b> are longer explainers.</li>
       <li>No heading practice: England's FA says heading should not be introduced in training at U6 to U11 (<a href="https://www.thefa.com/-/media/thefacom-new/files/rules-and-regulations/2023-24/heading-guidance/youth-heading-guidance-chart.ashx" target="_blank" rel="noopener">FA guidance</a>).</li>
+      <li>Skills &amp; levels come from lessons of Spanish, Japanese and Argentine academies. Each lesson and its source is on the <a href="#/skills">Skills page</a>.</li>
       <li>Roles follow Spanish, Japanese and Argentine academies: try every position, keeper included, and carry and take players on first. Sources are on the <a href="#/roles">Roles page</a>.</li>
       <li>Load: fewer organised hours a week than his age, 1 to 2 days off (<a href="https://publications.aap.org/pediatrics/article/119/6/1242/70751/" target="_blank" rel="noopener">AAP</a>).</li>
     </ul></div>`;
@@ -647,6 +665,74 @@ function viewRole(id) {
     ${id === cur ? '' : `<p style="margin-top:18px"><button class="btn" data-action="set-role" data-role="${id}" data-testid="set-role">He plays ${esc(r.name.toLowerCase())} this Saturday</button></p>`}`;
 }
 
+// ---------- skills & levels ----------
+function skillsCard() {
+  const sum = P.skillsSummary(state.settings);
+  const cur = P.skillsFor(todayKey(), state.settings);
+  return `<section class="rec" data-testid="skills-card"><div class="spread"><h3>Levels passed</h3><a class="small" href="#/skills">See all</a></div>
+    <p class="best" style="margin-top:6px">${sum.passed}<small>/ ${sum.total}</small></p>
+    <p class="small muted">Across all 12 skills, 4 levels each.${sum.mastered ? ` Mastered: ${plural(sum.mastered, 'skill').replace(' ', '&nbsp;')}.` : ''}</p>
+    ${cur.length ? `<p class="small muted" style="margin-top:12px">Next skill day:</p><p class="skill-chips" style="margin-top:6px">${cur.map((k) => `<a href="#/skill/${k}">${D.SKILLS[k].icon} ${esc(D.SKILLS[k].name)} ${pips(P.levelsPassed(k, state.settings), P.levelFor(k, state.settings))}</a>`).join('')}</p>` : ''}</section>`;
+}
+function skillCard(k) {
+  const sk = D.SKILLS[k];
+  const passed = P.levelsPassed(k, state.settings);
+  const lv = P.levelFor(k, state.settings);
+  return `<li><a class="skill-card" href="#/skill/${k}" data-testid="skill-card"><span class="rc-icon" aria-hidden="true">${sk.icon}</span>
+    <span><span class="rc-name">${esc(sk.name)}</span><span class="rc-meta">${passed === 4 ? 'Mastered ✓' : `Level ${lv}: ${esc(levelName(lv))}`}</span>${pips(passed, passed === 4 ? 0 : lv)}</span></a></li>`;
+}
+function viewSkills() {
+  const sum = P.skillsSummary(state.settings);
+  const fam = D.FAMILIES.map((f) => `<div class="section"><h2>${esc(f.name)} <span class="muted small" style="text-transform:none;letter-spacing:0">${esc(f.blurb)}</span></h2>
+    <ul class="role-grid skill-grid">${D.SKILL_SEQ.filter((k) => D.SKILLS[k].family === f.id).map(skillCard).join('')}</ul></div>`).join('');
+  const levels = D.LEVELS.map((l) => `<li><b>${l.n}. ${esc(l.name)}</b><span>${esc(l.blurb)}</span></li>`).join('');
+  const lessons = D.PRINCIPLES.map((x) => `<li data-testid="principle"><span class="flag" aria-hidden="true">${D.REFS[x.ref].flag}</span><span><b>${esc(x.rule)}.</b> ${esc(x.said)} <span class="how">In the app: ${esc(x.how)}</span> <a href="${x.url}" target="_blank" rel="noopener" aria-label="Source for ${esc(x.rule)}">Source ↗</a></span></li>`).join('');
+  return `<a class="back" href="#/drills">Drills</a><h1 style="margin-top:6px">Skills &amp; levels</h1>
+    <p class="muted" style="margin-top:8px">12 skills from Spanish, Japanese and Argentine academies, in 3 groups: ball, body and head. Each skill has 4 levels. Skill days train the level you are on.</p>
+    <div class="stat-row" style="margin-top:14px"><div class="stat"><p class="n" data-testid="levels-passed">${sum.passed}</p><p class="l">Levels passed</p></div><div class="stat"><p class="n">${sum.total - sum.passed}</p><p class="l">To go</p></div><div class="stat"><p class="n">${sum.mastered}</p><p class="l">Mastered</p></div></div>
+    <div class="section"><h2>The 4 levels</h2><ol class="level-key">${levels}</ol></div>
+    ${fam}
+    <div class="section"><h2>What the academies teach</h2><p class="small muted" style="margin:-4px 0 10px">The lessons behind the skills, and what the app does with each one.</p><ul class="principles" data-testid="principles">${lessons}</ul></div>
+    <div class="section"><h2>Safety</h2><ul class="card small safety-list"><li>No heading practice.</li><li>Keeper dives only on grass.</li><li>Levels 3–4 with Dad start at half speed.</li><li>Weekly organised football stays under his age in hours (9&nbsp;h).</li></ul></div>`;
+}
+function viewSkill(id) {
+  const sk = skillOf(id);
+  if (!sk) return notFound();
+  const st = state.settings;
+  const passed = P.levelsPassed(id, st);
+  const now = P.levelFor(id, st);
+  const eq = st.equipment;
+  const fam = D.FAMILIES.find((f) => f.id === sk.family);
+  const levels = sk.levels.map((l, i) => {
+    const n = i + 1;
+    const state_ = n <= passed ? 'done' : n === now ? 'now' : 'later';
+    const drills = l.drills.map((did) => {
+      const d = D.DRILLS[did];
+      const miss = (d.needs || []).filter((x) => !eq[x]);
+      return `<li><a href="#/drill/${did}?from=sk-${id}" data-testid="level-drill"><span><span class="name">${d.ref ? `${D.REFS[d.ref].flag} ` : ''}${esc(d.name)}</span><br><span class="needs">${d.mins} min · ${esc(d.cue)}${d.needs ? ` · needs ${d.needs.map((x) => NEED_LABEL[x]).join(', ')}` : ''}${miss.length ? ' (not ticked)' : ''}</span></span><span aria-hidden="true">›</span></a></li>`;
+    }).join('');
+    let hint = '';
+    if (l.test && state_ !== 'done') {
+      const b = P.best(l.test, state.records);
+      const ok = b !== null && (D.TESTS[l.test].dir === 'down' ? b <= l.target : b >= l.target);
+      hint = `<p class="small ${ok ? 'good' : 'muted'}" style="margin-top:6px">${ok ? `His record (${withUnit(b, D.TESTS[l.test].unit)}) already passes this.` : `Best so far: ${b === null ? 'none yet' : withUnit(b, D.TESTS[l.test].unit)}. Log it in Records.`}</p>`;
+    }
+    const btn = state_ === 'now' ? `<button class="btn primary small" data-action="pass-level" data-skill="${id}" data-level="${n}" data-testid="pass-level">✓ He passed level ${n}</button>`
+      : state_ === 'done' && n === passed ? `<button class="btn ghost small" data-action="unpass-level" data-skill="${id}" data-level="${n}" data-testid="unpass-level">Undo</button>` : '';
+    return `<section class="level-card ${state_}" data-testid="level-${n}"><div class="spread"><h3>Level ${n}: ${esc(l.name || levelName(n))}</h3><span class="lv-state">${state_ === 'done' ? 'Passed ✓' : state_ === 'now' ? 'Now' : ''}</span></div>
+      <p class="small muted">${esc(D.LEVELS[i].blurb)}</p>
+      <ul class="drill-list">${drills}</ul>
+      <p class="pass-test"><b>Pass test:</b> ${esc(l.pass)}</p>${hint}
+      ${btn ? `<div class="row" style="margin-top:10px">${btn}</div>` : ''}</section>`;
+  }).join('');
+  return `<a class="back" href="#/skills">Skills</a>
+    <header class="drill-head"><p class="eyebrow">Skill · ${esc(fam.name)}</p><h1 data-testid="skill-name"><span aria-hidden="true">${sk.icon}</span> ${esc(sk.name)}</h1>
+      <p style="margin-top:8px">${pips(passed, passed === 4 ? 0 : now)} <span class="muted small">${passed === 4 ? 'Mastered' : `On level ${now} of 4`}</span></p></header>
+    <p class="ref-tag"><span class="flag" aria-hidden="true">${D.REFS[sk.ref].flag}</span><span><b>From ${esc(D.REFS[sk.ref].name)}.</b> ${esc(sk.why)}</span></p>
+    ${levels}
+    <p class="small muted" style="margin-top:16px">Dad ticks a level when he passes the test, twice in a row on different days. Every level: both feet.</p>`;
+}
+
 function notFound() { return '<h1>Not found</h1><p style="margin-top:12px"><a href="#/">Back to today</a></p>'; }
 
 // ---------- router ----------
@@ -665,12 +751,14 @@ function render(keepScroll = false) {
   let html; let tab;
   switch (parts[0]) {
     case undefined: html = viewToday(); tab = 'today'; break;
-    case 'drill': html = viewDrill(parts[1], q.get('from')); tab = q.get('from') === 'lib' ? 'drills' : 'today'; break;
+    case 'drill': html = viewDrill(parts[1], q.get('from')); tab = q.get('from') === 'lib' || String(q.get('from')).startsWith('sk-') ? 'drills' : 'today'; break;
     case 'drills': html = viewLibrary(); tab = 'drills'; break;
     case 'area': html = viewArea(parts[1]); tab = 'drills'; break;
     case 'brain': html = viewBrain(q.get('from'), q.get('role')); tab = 'brain'; break;
     case 'roles': html = viewRoles(); tab = 'drills'; break;
     case 'role': html = viewRole(parts[1]); tab = 'drills'; break;
+    case 'skills': html = viewSkills(); tab = 'drills'; break;
+    case 'skill': html = viewSkill(parts[1]); tab = 'drills'; break;
     case 'records': html = viewRecords(); tab = 'records'; break;
     case 'after': html = viewAfter(); tab = 'today'; break;
     case 'dad': html = viewDad(); tab = 'dad'; break;
@@ -705,6 +793,14 @@ app.addEventListener('click', (e) => {
     const r = markDone(id);
     toast(r.justCompleted ? `Daily done! Streak ${P.streak(todayKey(), state.history, state.settings)}` : 'Pictures done');
     go(nextHash(id));
+  }
+  else if (a === 'pass-level' || a === 'unpass-level') {
+    const id = b.dataset.skill; const n = Number(b.dataset.level);
+    if (!skillOf(id) || !(n >= 1 && n <= 4)) return;
+    state.settings.skills[id] = a === 'pass-level' ? Math.max(P.levelsPassed(id, state.settings), n) : n - 1;
+    state.settings.configured = true; persist();
+    if (a === 'pass-level') { beep(1200, 0.3); toast(n === 4 ? `${skillOf(id).name} mastered!` : `Level ${n} passed! Level ${n + 1} starts next skill day.`); } else toast('Undone');
+    render(true);
   }
   else if (a === 'set-role') {
     const ws = P.weekStart(todayKey());
@@ -760,7 +856,7 @@ function onDone(id, from) {
   const r = markDone(id);
   const inSession = r.session.blocks.some((b) => b.drill === id);
   const d = D.DRILLS[id];
-  const backTo = from === 'role' ? (d.role ? `#/role/${d.role}` : '#/roles') : from === 'lib' ? `#/area/${d.area}` : '#/';
+  const backTo = from && from.startsWith('sk-') ? `#/skill/${from.slice(3)}` : from === 'role' ? (d.role ? `#/role/${d.role}` : '#/roles') : from === 'lib' ? `#/area/${d.area}` : '#/';
   if (r.justCompleted) { beep(990, 0.2); toast(`Daily done! Streak ${P.streak(todayKey(), state.history, state.settings)}`); go('#/'); return; }
   if (from || !inSession) { if (!already) toast('Logged'); go(backTo); return; }
   go(nextHash(id));
@@ -813,7 +909,7 @@ app.addEventListener('change', (e) => {
   const s = state.settings;
   const path = t.dataset.set;
   let v = t.type === 'checkbox' ? t.checked : t.type === 'number' ? Number(t.value) : t.value;
-  if (path === 'focusOverride' || path === 'roleOverride') {
+  if (path === 'focusOverride' || path === 'roleOverride' || path === 'skillOverride') {
     const ws = P.weekStart(todayKey());
     if (v === 'auto') delete s[path][ws]; else s[path][ws] = v;
   } else if (path === 'playerName') s.playerName = String(v).trim().slice(0, 20) || 'Player';

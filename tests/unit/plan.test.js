@@ -30,12 +30,11 @@ test('data integrity: every referenced drill exists', () => {
     if (d.cues) assert.ok(['colours', 'numbers', 'arrows', 'calls', 'turn', 'runs'].includes(d.cues), `${id} cues`);
   }
   for (const id of [...D.DAILY3.bounce, D.DAILY3.touch, D.DAILY3.touchAlt, D.DAILY3.look]) assert.ok(ids.has(id), id);
-  for (const t of D.THEMES) for (const id of t.pool) assert.ok(ids.has(id), `${t.id} ${id}`);
   for (const [k, f] of Object.entries(D.FOCUSES)) assert.ok(ids.has(f.drill), `focus ${k}`);
   for (const q of Object.values(D.FOCUS_BY_POS)) for (const f of q) assert.ok(D.FOCUSES[f], f);
-  assert.equal(D.AREAS.length, 18);
+  assert.equal(D.AREAS.length, 20);
   assert.equal(D.AREAS.filter((a) => a.tft).length, 8);
-  for (const a of D.AREAS) assert.ok(Object.values(D.DRILLS).some((d) => d.area === a.id), `area ${a.id} has a drill`);
+  for (const a of D.AREAS) if (!a.href) assert.ok(Object.values(D.DRILLS).some((d) => d.area === a.id), `area ${a.id} has a drill`);
 });
 
 test('no heading drills anywhere (no heading practice at U10)', () => {
@@ -80,14 +79,14 @@ test('role day = Daily 3 + 2 role drills + role pictures, and it is the last ful
   assert.equal(P.roleDayOf('2026-09-28', st), '2026-09-30');
   const s = P.buildSession('2026-09-30', st);
   assert.equal(s.roleDay, true);
-  assert.equal(s.theme, null);
+  assert.deepEqual(s.skills, []);
   assert.deepEqual(s.blocks.map((b) => b.slot), ['Bounce', 'Touch', 'Look', 'Role', 'Role', 'Brain']);
   assert.equal(s.blocks.at(-1).drill, 'b_role_pick');
   for (const b of s.blocks.filter((x) => x.slot === 'Role')) assert.ok(D.ROLES[s.role].drills.includes(b.drill) || !P.canDo(D.ROLES[s.role].drills[0], st.equipment), b.drill);
   assert.ok(s.minutes >= 15 && s.minutes <= 25, `minutes ${s.minutes}`);
   const mon = P.buildSession('2026-09-28', st);
   assert.equal(mon.roleDay, false);
-  assert.ok(mon.theme);
+  assert.equal(mon.skills.length, 2);
 });
 
 test('role of the week rotates through all six, keeper included; Dad can set it for one week', () => {
@@ -114,17 +113,17 @@ test('role drills rotate in pairs so all 3 of a role come round', () => {
   assert.deepEqual([...got].sort(), [...D.ROLES.cm.drills].sort());
 });
 
-test('themes still rotate with a role day; one home day = role day every other week', () => {
+test('skills still rotate with a role day; one home day = role day every other week', () => {
   const st = P.mergeSettings({ schedule: { mon: 'home', tue: 'home', wed: 'home', thu: 'team', fri: 'home', sat: 'game', sun: 'rest' } });
   const seen = new Set();
-  for (let i = 0; i < 35; i++) { const t = P.themeFor(P.addDays('2026-09-28', i), st); if (t) seen.add(t.id); }
-  assert.equal(seen.size, 5);
+  for (let i = 0; i < 42; i++) P.skillsFor(P.addDays('2026-09-28', i), st).forEach((k) => seen.add(k));
+  assert.equal(seen.size, 12, 'all 12 skills within 6 weeks with 2 skill days a week');
   const one = P.mergeSettings({ schedule: { mon: 'team', tue: 'team', wed: 'home', thu: 'team', fri: 'home', sat: 'game', sun: 'rest' } });
   const roleWeeks = [0, 1, 2, 3].map((w) => P.roleDayOf(P.addDays('2026-09-28', w * 7), one) !== null);
   assert.deepEqual(roleWeeks.filter(Boolean).length, 2);
-  const themes = new Set();
-  for (let i = 0; i < 70; i++) { const t = P.themeFor(P.addDays('2026-09-28', i), one); if (t) themes.add(t.id); }
-  assert.equal(themes.size, 5, 'all themes still come round with one home day');
+  const skills = new Set();
+  for (let i = 0; i < 16 * 7; i++) P.skillsFor(P.addDays('2026-09-28', i), one).forEach((k) => skills.add(k));
+  assert.equal(skills.size, 12, 'all skills still come round with one home day');
 });
 
 test('light day before a game uses this week\'s role pictures', () => {
@@ -175,7 +174,7 @@ test('old saved positions (mid, fwd) map to the 9v9 roles', () => {
   for (const p of D.POSITIONS) assert.ok(D.FOCUS_BY_POS[p.id], p.id);
 });
 
-test('full day = Daily 3 + focus + 2 theme drills, 15-25 min', () => {
+test('full day = Daily 3 + focus + a ball skill + a body/head skill at his level, 15-25 min', () => {
   const s = P.buildSession('2026-09-28', base());
   assert.equal(s.type, 'full');
   assert.deepEqual(s.blocks.slice(0, 3).map((b) => b.slot), ['Bounce', 'Touch', 'Look']);
@@ -183,6 +182,12 @@ test('full day = Daily 3 + focus + 2 theme drills, 15-25 min', () => {
   assert.equal(s.blocks.length, 6);
   assert.ok(s.minutes >= 15 && s.minutes <= 25, `minutes ${s.minutes}`);
   assert.equal(new Set(s.blocks.map((b) => b.drill)).size, s.blocks.length, 'no duplicates');
+  assert.equal(s.skills.length, 2);
+  assert.equal(D.SKILLS[s.skills[0]].family, 'ball');
+  assert.notEqual(D.SKILLS[s.skills[1]].family, 'ball');
+  assert.deepEqual(s.levels, [1, 1]);
+  const sk = s.blocks.slice(4);
+  sk.forEach((b, i) => { assert.equal(b.skill, s.skills[i]); assert.equal(b.level, 1); });
 });
 
 test('team day = Daily 3 only; light day adds brain; game = warm-up; rest = nothing', () => {
@@ -209,27 +214,75 @@ test('look slot swaps to a no-wall drill when there is no wall', () => {
   assert.equal(s3.blocks[2].drill, 'd_scan_toss');
 });
 
-test('themes rotate so all 5 appear within 6 weeks on the default schedule (1 theme day + 1 role day a week)', () => {
+test('skills: all 12 come round within 8 weeks on the default schedule (1 skill day + 1 role day a week)', () => {
   const st = base();
   const seen = new Set();
-  for (let i = 0; i < 42; i++) {
-    const t = P.themeFor(P.addDays('2026-09-28', i), st);
-    if (t) seen.add(t.id);
-  }
-  assert.equal(seen.size, 5);
+  for (let i = 0; i < 56; i++) P.skillsFor(P.addDays('2026-09-28', i), st).forEach((k) => seen.add(k));
+  assert.equal(seen.size, 12);
+  // carry and beat a player come round twice as often as the other ball skills
+  const n = {};
+  for (let i = 0; i < 7 * 48; i++) P.skillsFor(P.addDays('2026-09-28', i), st).forEach((k) => { n[k] = (n[k] || 0) + 1; });
+  assert.ok(n.carry === 2 * n.pass && n.beat === 2 * n.finish, JSON.stringify(n));
 });
 
-test('theme drills rotate between occurrences of the same theme', () => {
-  const st = P.mergeSettings({ schedule: { mon: 'home', tue: 'home', wed: 'home', thu: 'home', fri: 'home', sat: 'rest', sun: 'rest' } });
-  const byTheme = {};
-  for (let i = 0; i < 70; i++) {
-    const k = P.addDays('2026-09-28', i);
-    const s = P.buildSession(k, st);
-    if (s.type !== 'full') continue;
-    const set = s.blocks.filter((b) => !['Bounce', 'Touch', 'Look', 'Focus'].includes(b.slot)).map((b) => b.drill).join(',');
-    (byTheme[s.theme] = byTheme[s.theme] || new Set()).add(set);
+test('skill drills rotate between skill days, from his current level', () => {
+  const st = P.mergeSettings({ schedule: { mon: 'home', tue: 'home', wed: 'home', thu: 'home', fri: 'home', sat: 'rest', sun: 'rest' }, equipment: { wall: true, rebounder: true, partner: true } });
+  const bySkill = {};
+  for (let i = 0; i < 7 * 20; i++) {
+    const s = P.buildSession(P.addDays('2026-09-28', i), st);
+    for (const b of s.blocks.filter((x) => x.skill)) (bySkill[b.skill] = bySkill[b.skill] || new Set()).add(b.drill);
   }
-  assert.ok(byTheme.master.size >= 2, 'master rotates');
+  for (const [k, set] of Object.entries(bySkill)) {
+    const l1 = D.SKILLS[k].levels[0].drills;
+    assert.ok(set.size >= Math.min(2, l1.length), `${k} rotates: ${[...set]}`);
+    for (const d of set) assert.ok(l1.includes(d), `${k} level 1 only: ${d}`);
+  }
+});
+
+test('passing a level moves skill days to the next level; mastered stays on 4', () => {
+  assert.equal(P.levelFor('carry', base()), 1);
+  const st = P.mergeSettings({ skills: { carry: 2, beat: 4 }, skillOverride: { '2026-09-28': 'carry' } });
+  assert.equal(P.levelFor('carry', st), 3);
+  assert.equal(P.levelFor('beat', st), 4);
+  assert.equal(P.levelsPassed('beat', P.mergeSettings({ skills: { beat: 9 } })), 4, 'clamped');
+  const s = P.buildSession('2026-09-28', st);
+  assert.deepEqual(s.skills, ['carry']);
+  const sk = s.blocks.filter((b) => b.skill);
+  assert.equal(sk.length, 2, 'one skill for the week = both drills from it');
+  for (const b of sk) assert.ok(P.skillPool('carry', 3).includes(b.drill) || D.SKILLS.carry.levels[2].drills.some((d) => P.resolveDrill(d, st.equipment) === b.drill), b.drill);
+  assert.ok(D.SKILLS.carry.levels[2].drills.map((d) => P.resolveDrill(d, st.equipment)).includes(sk[0].drill), 'first drill is from level 3');
+  const sum = P.skillsSummary(st);
+  assert.deepEqual(sum, { passed: 6, total: 48, mastered: 1 });
+  const next = P.buildSession('2026-10-05', st);
+  assert.equal(next.skills.length, 2, 'the override is for one week only');
+});
+
+test('skills data: 12 skills, 3 families, 4 levels each, every drill exists, sourced', () => {
+  const ids = Object.keys(D.SKILLS);
+  assert.equal(ids.length, 12);
+  assert.deepEqual([...D.SKILL_SEQ].sort(), [...ids].sort());
+  assert.deepEqual([...new Set([...D.SKILL_ROTATION.ball, ...D.SKILL_ROTATION.other])].sort(), [...ids].sort());
+  for (const k of D.SKILL_ROTATION.ball) assert.equal(D.SKILLS[k].family, 'ball');
+  for (const k of D.SKILL_ROTATION.other) assert.notEqual(D.SKILLS[k].family, 'ball');
+  for (const f of D.FAMILIES) assert.ok(ids.some((k) => D.SKILLS[k].family === f.id), f.id);
+  for (const k of ids) {
+    const sk = D.SKILLS[k];
+    assert.equal(sk.levels.length, 4, k);
+    assert.ok(D.REFS[sk.ref] && sk.why && sk.short, k);
+    sk.levels.forEach((l, i) => {
+      assert.ok(l.drills.length >= 1 && l.pass, `${k} L${i + 1}`);
+      for (const d of l.drills) assert.ok(D.DRILLS[d], `${k} L${i + 1} ${d}`);
+      if (l.test) assert.ok(D.TESTS[l.test] && D.TESTS[l.test].steps.includes(l.target), `${k} L${i + 1} target is a belt step`);
+    });
+    // every level 1 works with no kit at all
+    assert.ok(sk.levels[0].drills.some((d) => P.resolveDrill(d, { wall: false, rebounder: false, partner: false })), `${k} L1 no kit`);
+  }
+  for (const p of D.PRINCIPLES) assert.ok(D.REFS[p.ref] && /^https:\/\//.test(p.url) && p.rule && p.said && p.how, p.rule);
+  assert.ok(D.PRINCIPLES.length >= 10);
+  assert.ok(!D.PRINCIPLES.some((p) => /footballaustralia|playfootball\.com\.au/.test(p.url)));
+  assert.ok(Object.keys(D.DRILLS).length >= 110, `drills ${Object.keys(D.DRILLS).length}`);
+  const heading = Object.entries(D.DRILLS).filter(([, d]) => /\bhead(ing|er|ers)\b|head the ball|with your head(?! up)/i.test(`${d.name} ${d.cue} ${d.steps.join(' ')}`));
+  assert.deepEqual(heading.map(([k]) => k), [], 'no heading drills');
 });
 
 test('focus: position queue, weekly rotation and override', () => {

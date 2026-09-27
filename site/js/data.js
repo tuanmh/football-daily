@@ -1,7 +1,9 @@
-// Content for Football Daily: areas, drills, tests, belts, focuses, themes, brain pictures.
+// Content for Football Daily: areas, drills, tests, belts, focuses, brain pictures. Skills & levels: skills.js. Roles: roles.js.
 // Plain data only. Logic lives in plan.js. Role content (9v9) lives in roles.js.
 import { ROLE_DRILLS, ROLE_SCENARIOS, BASE_SCENARIO_ROLES } from './roles.js';
+import { SKILL_DRILLS } from './skills.js';
 export { ROLES, ROLE_SEQ, REFS, ROLE_SOURCES, SHAPE_323, ROLE_EXTRAS } from './roles.js';
+export { SKILLS, SKILL_SEQ, SKILL_ROTATION, LEVELS, FAMILIES, PRINCIPLES, DRILL_SKILLS } from './skills.js';
 
 export const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 export const JS_DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']; // Date#getUTCDay order
@@ -23,6 +25,7 @@ export const TFT = {
 
 // 18 areas: the 8 tft-tube tiles, 9 added for the game around the ball, and the 9v9 roles.
 export const AREAS = [
+  { id: 'skills', name: 'Skills & levels', blurb: '12 skills from the academies, 4 levels each.', href: '#/skills' },
   { id: 'agility', name: 'Agility', tft: TFT.agility },
   { id: 'control', name: 'Control & Pass', tft: TFT.control },
   { id: 'mastery', name: 'Ball Mastery', tft: TFT.mastery },
@@ -40,6 +43,7 @@ export const AREAS = [
   { id: 'shooting', name: 'Shooting', blurb: 'Both feet, laces, on target.' },
   { id: 'weak', name: 'Weak Foot', blurb: 'Make the other foot useful.' },
   { id: 'warmup', name: 'Warm-up & Recovery', blurb: 'Ready before, looked after after.' },
+  { id: 'keeper', name: 'Keeper', blurb: 'Catching, set position and shuffles. Everyone takes a turn in goal.' },
   { id: 'roles', name: 'Roles 9v9', blurb: 'Keeper, centre back, wide defender, midfield, winger, striker.', href: '#/roles' },
 ];
 
@@ -185,7 +189,7 @@ const CORE_DRILLS = {
   w_cooldown: { area: 'warmup', name: 'Cool-down', mins: 3, cue: 'Slow breaths',
     steps: ['Walk for 1 minute.', 'Hold each stretch for 15 seconds: calves, thighs, hamstrings, hips.', 'Drink water.'] },
 };
-export const DRILLS = { ...CORE_DRILLS, ...ROLE_DRILLS };
+export const DRILLS = { ...CORE_DRILLS, ...ROLE_DRILLS, ...SKILL_DRILLS };
 
 export const DAILY3 = {
   bounce: ['d_toetaps', 'd_bounce_react', 'd_tick_tock', 'd_hops'],
@@ -222,13 +226,6 @@ export const POSITIONS = [
   { id: 'st', name: 'Striker' },
 ];
 
-export const THEMES = [
-  { id: 'master', name: 'Master', blurb: 'Ball mastery, drag-backs, 1v1 moves', pool: ['m_sole_rolls', 'm_dragback_v', 'm_beat_cone', 'm_slalom', 'm_l_turn', 'm_inside_outside'] },
-  { id: 'pass', name: 'Pass', blurb: 'Wall work, first touch, weak foot', pool: ['p_two_touch', 'p_open_up', 'p_weak_wall'] },
-  { id: 'brain', name: 'Brain', blurb: 'Game intelligence and positioning, easy on the legs', pool: ['b_pause_pick', 'b_where_go', 'b_watch_pro'] },
-  { id: 'defend', name: 'Defend', blurb: 'Jockeying, goal-side, second balls', pool: ['f_jockey', 's_second_ball', 'f_goalside', 's_drop_pounce'] },
-  { id: 'strike', name: 'Strike', blurb: 'Shooting and running with the ball', pool: ['k_shots', 'k_run_ball', 'k_first_time'] },
-];
 
 // Pause & pick. Pitch coords: x 0-100 (left to right), y 0-130 (our goal at the bottom).
 // arrows: [x1, y1, x2, y2, who]; move: the right move for YOU, drawn after answering.
