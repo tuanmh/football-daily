@@ -6,6 +6,7 @@ const TUE = '2026-09-29'; // team
 const FRI = '2026-10-02'; // light (game tomorrow)
 const SAT = '2026-10-03'; // game
 const SUN = '2026-10-04'; // rest
+const WED = '2026-09-30'; // role day (last home day before the light day)
 const at = (date, hash = '#/') => `./?date=${date}&nosw${hash}`;
 
 const errors = [];
@@ -48,7 +49,8 @@ test('team day shows only the Daily 3', async ({ page }) => {
 test('light, game and rest days', async ({ page }) => {
   await page.goto(at(FRI));
   await expect(page.getByTestId('day-title')).toHaveText('Light day');
-  await expect(page.locator('[data-drill=b_pause_pick]')).toBeVisible();
+  await expect(page.locator('[data-drill=b_role_pick]')).toBeVisible();
+  await expect(page.getByTestId('job-card')).toContainText('Saturday you play');
   await page.goto(at(SAT));
   await expect(page.getByTestId('game-day')).toBeVisible();
   await expect(page.getByTestId('after-btn')).toBeVisible();
@@ -114,8 +116,10 @@ test('coach mode: countdown, flashes colours full-screen, tap to stop', async ({
 });
 
 test('brain: answer 3 pictures from today, then finish marks the drill', async ({ page }) => {
-  await page.goto(at(FRI, '#/drill/b_pause_pick'));
+  await page.goto(at(FRI, '#/drill/b_role_pick'));
+  await expect(page.getByTestId('open-brain')).toHaveAttribute('href', /role=cb/);
   await page.getByTestId('open-brain').click();
+  await expect(page.locator('.role-pills a[aria-current]')).toContainText('Centre back');
   await expect(page.getByTestId('pitch')).toBeVisible();
   for (let i = 0; i < 3; i++) {
     await page.locator('[data-testid=choice][data-correct=true]').click();
@@ -126,7 +130,7 @@ test('brain: answer 3 pictures from today, then finish marks the drill', async (
   await page.getByTestId('brain-finish').click();
   await expect(page).toHaveURL(/#\/(drill\/|$)/);
   await page.goto(at(FRI));
-  await expect(page.locator('[data-drill=b_pause_pick]').locator('..')).toHaveClass(/done/);
+  await expect(page.locator('[data-drill=b_role_pick]').locator('..')).toHaveClass(/done/);
 });
 
 test('brain: a wrong answer shows the right one and comes back later', async ({ page }) => {
@@ -189,9 +193,9 @@ test('game day reflection saves and shows on records', async ({ page }) => {
   await expect(page.locator('.reflect-list')).toContainText('felt OK');
 });
 
-test('library: 17 tiles, 8 TFT; every drill page renders', async ({ page }) => {
+test('library: 18 tiles, 8 TFT; every drill page renders', async ({ page }) => {
   await page.goto(at(MON, '#/drills'));
-  await expect(page.getByTestId('tile')).toHaveCount(17);
+  await expect(page.getByTestId('tile')).toHaveCount(18);
   await expect(page.locator('.tile:not(.new)')).toHaveCount(8);
   const hrefs = await page.getByTestId('tile').evaluateAll((els) => els.map((e) => e.getAttribute('href')));
   const drills = new Set();
@@ -216,7 +220,7 @@ test('streak survives rest day and game day', async ({ page }) => {
 });
 
 test('no horizontal overflow on any main screen', async ({ page }) => {
-  for (const h of ['#/', '#/drills', '#/brain', '#/records', '#/dad', '#/drill/fo_check_receive', '#/after']) {
+  for (const h of ['#/', '#/drills', '#/brain', '#/records', '#/dad', '#/drill/fo_check_receive', '#/after', '#/roles', '#/role/wd', '#/brain?role=st', '#/drill/r_w_mitoma']) {
     await page.goto(at(MON, h));
     const over = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(over, h).toBeLessThanOrEqual(0);
@@ -227,18 +231,18 @@ test('drill page: YouTube demos show as thumbnails, tap loads the nocookie embed
   await page.goto(at(MON, '#/drill/m_beat_cone'));
   const vids = page.getByTestId('video');
   await expect(vids).toHaveCount(3);
-  await expect(vids.first()).toContainText('Football Australia');
-  await expect(page.getByTestId('yt-link').first()).toHaveAttribute('href', /youtube\.com\/watch\?v=SG_Da2nwEhs/);
-  await expect(vids.first().locator('img')).toHaveAttribute('src', /i\.ytimg\.com\/vi\/SG_Da2nwEhs\/sddefault\.jpg/);
+  await expect(vids.first()).toContainText('REGATE');
+  await expect(page.getByTestId('yt-link').first()).toHaveAttribute('href', /youtube\.com\/watch\?v=aY-GFsROy7A/);
+  await expect(vids.first().locator('img')).toHaveAttribute('src', /i\.ytimg\.com\/vi\/aY-GFsROy7A\/sddefault\.jpg/);
   await expect(page.locator('iframe')).toHaveCount(0);
   await vids.first().getByRole('button').click();
   const f = page.getByTestId('video-frame');
   await expect(f).toHaveCount(1);
-  await expect(f).toHaveAttribute('src', /^https:\/\/www\.youtube-nocookie\.com\/embed\/SG_Da2nwEhs\?/);
+  await expect(f).toHaveAttribute('src', /^https:\/\/www\.youtube-nocookie\.com\/embed\/aY-GFsROy7A\?/);
   // Playing a second one closes the first.
   await vids.nth(1).getByRole('button').click();
   await expect(page.getByTestId('video-frame')).toHaveCount(1);
-  await expect(page.getByTestId('video-frame')).toHaveAttribute('src', /u0rqvGrl1YU/);
+  await expect(page.getByTestId('video-frame')).toHaveAttribute('src', /O8zTVE8MMfc/);
   await expect(vids.first().getByRole('button')).toBeVisible();
 });
 
@@ -247,4 +251,128 @@ test('today plan marks drills with a video; library tiles count videos', async (
   await expect(page.getByTestId('plan-item').first()).toContainText('video');
   await page.goto(at(MON, '#/drills'));
   await expect(page.getByTestId('tile').first()).toContainText(/\d+ videos?/);
+});
+
+// ---------- roles (9v9) ----------
+test('role day: job card, 2 role drills and role pictures replace a theme day', async ({ page }) => {
+  await page.goto(at(WED));
+  await expect(page.getByTestId('day-title')).toHaveText('Role day');
+  await expect(page.getByTestId('job-card')).toContainText('Centre back');
+  await expect(page.getByTestId('job-card')).toContainText("Level, don't dive");
+  await expect(page.getByTestId('plan-item')).toHaveCount(6);
+  await expect(page.locator('.plan .slot.role-slot')).toHaveCount(2);
+  await expect(page.locator('[data-drill=b_role_pick]')).toBeVisible();
+  const mins = Number((await page.getByTestId('minutes').textContent()).match(/\d+/)[0]);
+  expect(mins).toBeGreaterThanOrEqual(15);
+  expect(mins).toBeLessThanOrEqual(25);
+});
+
+test('roles page: 6 roles on a 9v9 shape, role page has job, 3 drills, pictures, badge', async ({ page }) => {
+  await page.goto(at(MON, '#/drills'));
+  await page.locator('.tile.roles').click();
+  await expect(page).toHaveURL(/#\/roles$/);
+  await expect(page.getByTestId('role-card')).toHaveCount(6);
+  await expect(page.getByTestId('mini-pitch').locator('circle')).toHaveCount(10); // 9 players + centre circle
+  await expect(page.locator('.role-sources')).toContainText('Japan');
+  await expect(page.locator('.role-sources a[href*="footballaustralia"]')).toHaveCount(0);
+  await page.getByTestId('role-card').filter({ hasText: 'Goalkeeper' }).click();
+  await expect(page.getByTestId('role-name')).toContainText('Goalkeeper');
+  await expect(page.getByTestId('job-card')).toContainText('Set when they shoot');
+  await expect(page.getByTestId('role-drill')).toHaveCount(3);
+  await expect(page.getByTestId('badge-gk')).toContainText('0/2 role days');
+  await page.getByTestId('role-drill').nth(1).click();
+  await expect(page.getByTestId('drill-name')).toHaveText('Narrow the angle');
+  await expect(page.getByTestId('ref-tag')).toContainText('From Japan');
+  await expect(page.getByTestId('video').first()).toBeVisible();
+  await page.getByTestId('done-btn').click();
+  await expect(page).toHaveURL(/#\/role\/gk$/);
+});
+
+test('every role drill page renders with a video', async ({ page }) => {
+  for (const r of ['gk', 'cb', 'wd', 'cm', 'wing', 'st']) {
+    await page.goto(at(MON, `#/role/${r}`));
+    const hrefs = await page.getByTestId('role-drill').evaluateAll((els) => els.map((e) => e.getAttribute('href')));
+    expect(hrefs.length, r).toBe(3);
+    for (const h of hrefs) {
+      await page.goto(at(MON, h));
+      await expect(page.getByTestId('drill-name')).toBeVisible();
+      await expect(page.getByTestId('video').first()).toBeVisible();
+    }
+  }
+});
+
+test('dad: set Saturday role; today and the role page follow it, this week only', async ({ page }) => {
+  await page.goto(at(WED, '#/dad'));
+  await page.getByTestId('role-select').selectOption('st');
+  await expect(page.locator('#toast')).toHaveText('Saved');
+  await expect(page.getByTestId('week-plan')).toContainText('Role day: Striker');
+  await page.goto(at(WED));
+  await expect(page.getByTestId('job-card')).toContainText('Striker');
+  await page.goto(at('2026-10-07'));
+  await expect(page.getByTestId('job-card')).not.toContainText('Striker');
+  await page.goto(at(WED, '#/role/wing'));
+  await page.getByTestId('set-role').click();
+  await page.goto(at(WED));
+  await expect(page.getByTestId('job-card')).toContainText('Winger');
+});
+
+test('role pictures: filter by role, attacking pictures flip so we attack up', async ({ page }) => {
+  await page.goto(at(MON, '#/brain?role=st'));
+  await expect(page.locator('.role-pills a[aria-current]')).toContainText('Striker');
+  await expect(page.locator('.att-note')).toBeVisible();
+  await expect(page.locator('.key')).toContainText('Their keeper');
+  await expect(page.getByTestId('brain-score')).toContainText('0/5');
+  await page.locator('[data-testid=choice][data-correct=true]').click();
+  await expect(page.getByTestId('explain')).toContainText('Yes!');
+  await expect(page.getByTestId('brain-score')).toContainText('1/5');
+  await page.locator('.role-pills a', { hasText: 'Goalkeeper' }).click();
+  await expect(page.locator('.att-note')).toHaveCount(0);
+  await expect(page.locator('.key')).toContainText('Your keeper');
+  await page.locator('.role-pills a', { hasText: 'All' }).click();
+  await expect(page.getByTestId('brain-score')).toContainText(/\/4\d/);
+});
+
+test('game day shows the job card; after-game asks if he did his job', async ({ page }) => {
+  await page.goto(at(SAT));
+  await expect(page.getByTestId('job-card')).toContainText('Today you play');
+  await page.getByTestId('after-btn').click();
+  await expect(page.getByTestId('job-seg')).toBeVisible();
+  await page.fill('#good', 'Split wide every time');
+  await page.fill('#fix', 'Talk more');
+  await page.getByText('Yes', { exact: true }).click();
+  await page.getByTestId('save-reflect').click();
+  await page.goto(at(SAT, '#/records'));
+  await expect(page.locator('.reflect-list')).toContainText('Centre back: job yes');
+  await expect(page.getByTestId('badge-cb')).toBeVisible();
+  await expect(page.getByTestId('all-rounder')).toContainText('0/6');
+});
+
+test('coach mode TURN / MAN ON for the midfield scan drill', async ({ page }) => {
+  await page.goto(at(MON, '#/drill/r_cm_scan_turn'));
+  await page.getByTestId('coach-btn').click();
+  await expect(page.getByTestId('coach-word')).toHaveText(/TURN|MAN ON/, { timeout: 9000 });
+  await page.locator('#coach').click();
+  await expect(page.locator('#coach')).toBeHidden();
+});
+
+test('completing a role day counts toward the role badge', async ({ page }) => {
+  await page.goto(at(WED));
+  const ids = await page.getByTestId('plan-item').evaluateAll((els) => els.map((e) => e.dataset.drill));
+  await page.evaluate(({ day, done }) => {
+    const s = JSON.parse(localStorage.getItem('football-daily:v1'));
+    s.history[day] = { done: done.filter((d) => d !== 'b_role_pick'), complete: false };
+    localStorage.setItem('football-daily:v1', JSON.stringify(s));
+  }, { day: WED, done: ids });
+  await page.goto(at(WED, '#/drill/b_role_pick'));
+  await page.reload(); // hash-only navigation keeps the old in-memory state
+  await page.getByTestId('open-brain').click();
+  for (let i = 0; i < 3; i++) {
+    await page.locator('[data-testid=choice][data-correct=true]').click();
+    if (i < 2) await page.getByTestId('brain-next').click();
+  }
+  await page.getByTestId('brain-finish').click();
+  await expect(page.locator('#toast')).toContainText('Daily done');
+  await page.goto(at(WED, '#/role/cb'));
+  await expect(page.getByTestId('badge-cb')).toContainText('1/2 role days');
+  await expect(page.getByTestId('badge-cb')).toContainText('3/5 pictures');
 });

@@ -39,6 +39,16 @@ function videoSection(list, title = 'Watch how') {
     <p class="small muted vid-note">Videos play from YouTube. Watch one, then go and do it.</p></section>`;
 }
 const NEED_LABEL = { wall: 'a wall', rebounder: 'a rebounder', partner: 'Dad' };
+const roleOf = (id) => D.ROLES[id] || null;
+const refTag = (d) => (d.ref && D.REFS[d.ref] ? `<p class="ref-tag" data-testid="ref-tag"><span class="flag" aria-hidden="true">${D.REFS[d.ref].flag}</span><span><b>From ${esc(D.REFS[d.ref].name)}.</b> ${esc(d.why || '')}</span></p>` : '');
+function jobCard(roleId, title = 'My job', link = true) {
+  const r = roleOf(roleId);
+  if (!r) return '';
+  const rows = [['our', 'Our ball'], ['their', 'Their ball'], ['loose', 'Loose ball']];
+  return `<section class="job-card" data-testid="job-card"><div class="spread"><p class="eyebrow">${esc(title)}</p>${link ? `<a class="small" href="#/role/${r.id}">See the role</a>` : ''}</div>
+    <h2 class="job-role"><span aria-hidden="true">${r.icon}</span> ${esc(r.name)}</h2>
+    <ul class="job">${rows.map(([k, l]) => `<li><span class="jk ${k}">${l}</span><span>${esc(r.job[k])}</span></li>`).join('')}</ul></section>`;
+}
 const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
 const withUnit = (v, unit) => (unit.startsWith('/') ? `${v}${unit}` : `${v} ${unit}`);
 
@@ -99,6 +109,7 @@ function markDone(drillId, key = todayKey()) {
   const log = state.history[key] || (state.history[key] = { done: [], complete: false });
   if (!log.done.includes(drillId)) log.done.push(drillId);
   const session = P.buildSession(key, state.settings);
+  if (session.roleDay) log.role = session.role;
   const was = log.complete;
   log.complete = P.isComplete(session, log);
   persist();
@@ -150,6 +161,8 @@ const COACH_POOLS = {
   numbers: ['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((n) => ({ w: n, c: 'plain' })),
   arrows: [{ w: 'LEFT', a: -90, c: 'plain' }, { w: 'RIGHT', a: 90, c: 'plain' }, { w: 'FORWARD', a: 0, c: 'plain' }, { w: 'BACK', a: 180, c: 'plain' }],
   calls: [{ w: 'OUR BALL', c: 'green', say: 'Our ball!' }, { w: 'THEIR BALL', c: 'red', say: 'Their ball!' }, { w: 'KEEPER\'S BALL', c: 'yellow', say: 'Keeper\'s ball!' }],
+  turn: [{ w: 'TURN', c: 'green', say: 'Turn!' }, { w: 'MAN ON', c: 'red', say: 'Man on!' }],
+  runs: [{ w: 'FEET', c: 'yellow', say: 'Feet!' }, { w: 'IN BEHIND', c: 'blue', say: 'In behind!' }],
 };
 function coachShow(cls, inner, sub, word) {
   coachEl.className = `coach ${cls}`;
@@ -194,7 +207,7 @@ function startCoach(mode, label) {
     coachShow(cue.c, inner, null, cue.a !== undefined ? 'XXXX' : cue.w);
     if (cue.say) speak(cue.say);
     if (navigator.vibrate) navigator.vibrate(60);
-    later(blank, mode === 'calls' ? 1900 : 1500);
+    later(blank, ['calls', 'runs'].includes(mode) ? 1900 : 1500);
   };
   count();
 }
@@ -220,7 +233,7 @@ function planItem(b, log) {
   const d = D.DRILLS[b.drill];
   const done = log.includes(b.drill);
   const area = areaOf(d.area);
-  const cls = b.slot === 'Focus' ? 'focus' : (b.slot === 'Brain' ? 'brain-slot' : '');
+  const cls = b.slot === 'Focus' ? 'focus' : (b.slot === 'Brain' ? 'brain-slot' : (b.slot === 'Role' ? 'role-slot' : ''));
   return `<li class="${done ? 'done' : ''}"><a href="#/drill/${b.drill}" data-testid="plan-item" data-drill="${b.drill}">
     <span class="slot ${cls}">${esc(b.slot)}</span>
     <span><span class="name">${esc(d.name)}</span><span class="meta">${d.mins} min · ${esc(area.name)}${kidVideos(b.drill).length ? ' · ▶ video' : (tftFor(d) ? ' · TFT video' : '')}</span></span>
@@ -254,6 +267,7 @@ function viewToday() {
     const reflected = state.reflections.some((r) => r.date === key);
     return `${head}${band}${setup}<section class="day-card" data-testid="game-day"><p class="eyebrow">Game day</p><h2>Play free. Have fun.</h2>
       <p>Warm up, then think about one thing in the game: <b>${esc(focus.name)}</b>.</p></section>
+      ${jobCard(s.role, 'Today you play')}
       <ul class="plan">${s.blocks.map((b) => planItem(b, log)).join('')}</ul>
       <div class="start-wrap stack">
         ${reflected ? '<p class="muted">Game questions saved. Rest up.</p>' : '<a class="btn big primary" href="#/after" data-testid="after-btn">After the game: 3 questions</a>'}
@@ -261,16 +275,20 @@ function viewToday() {
   }
 
   const theme = s.theme ? D.THEMES.find((t) => t.id === s.theme) : null;
+  const role = roleOf(s.role);
   const sub = s.type === 'team' ? 'Team training today, so just the Daily 3'
-    : s.type === 'light' ? 'Game tomorrow, so keep it light'
-      : `Daily 3, this week's focus, then 2 ${theme.name} drills`;
+    : s.type === 'light' ? `Game tomorrow, so keep it light: Daily 3 and ${role.name.toLowerCase()} pictures`
+      : s.roleDay ? `Daily 3, 2 ${role.name.toLowerCase()} drills, then 3 pictures`
+        : `Daily 3, this week's focus, then 2 ${theme.name} drills`;
+  const title = s.type === 'full' ? (s.roleDay ? 'Role day' : `${esc(theme.name)} day`) : s.type === 'team' ? 'Team day' : 'Light day';
+  const job = s.roleDay || s.type === 'light' ? jobCard(s.role, 'Saturday you play') : '';
   const next = s.blocks.find((b) => !log.includes(b.drill));
   const anyDone = s.blocks.some((b) => log.includes(b.drill));
   const cta = next
     ? `<div class="start-wrap"><a class="btn big primary" href="#/drill/${next.drill}" data-testid="start">${anyDone ? 'Continue' : 'Start'}</a></div>`
     : `<section class="all-done" data-testid="all-done"><h2>Done for today</h2><p style="margin-top:6px">Streak: ${plural(streak, 'day')}. See you tomorrow.</p><p style="margin-top:12px"><a href="#/records">Log a record</a></p></section>`;
-  return `${head}${band}${setup}
-    <div class="section spread"><h2 data-testid="day-title">${s.type === 'full' ? esc(theme.name) + ' day' : s.type === 'team' ? 'Team day' : 'Light day'}</h2><span class="muted" data-testid="minutes">about ${s.minutes} min</span></div>
+  return `${head}${band}${setup}${job}
+    <div class="section spread"><h2 data-testid="day-title">${title}</h2><span class="muted" data-testid="minutes">about ${s.minutes} min</span></div>
     <p class="muted small" style="margin-top:4px">${esc(sub)}</p>
     <ul class="plan" data-testid="plan">${s.blocks.map((b) => planItem(b, log)).join('')}</ul>${cta}`;
 }
@@ -281,6 +299,8 @@ function coachHint(mode) {
     numbers: 'Coach mode flashes numbers. Shout the number while you run.',
     arrows: 'Coach mode flashes arrows. Move the way it points.',
     calls: 'Coach mode calls OUR BALL, THEIR BALL or KEEPER\'S BALL out loud and on screen.',
+    turn: 'Coach mode shows TURN or MAN ON. Put the tablet behind you and check it over your shoulder.',
+    runs: 'Coach mode calls FEET or IN BEHIND out loud and on screen.',
   }[mode];
 }
 
@@ -291,12 +311,15 @@ function viewDrill(id, from) {
   const s = P.buildSession(todayKey(), state.settings);
   const block = s.blocks.find((b) => b.drill === id);
   const done = doneToday().includes(id);
-  const lib = from === 'lib';
-  const back = lib ? `<a class="back" href="#/area/${d.area}">${esc(area.name)}</a>` : '<a class="back" href="#/">Today</a>';
+  const lib = from === 'lib' || from === 'role';
+  const back = from === 'role' ? (d.role ? `<a class="back" href="#/role/${d.role}">${esc(roleOf(d.role).name)}</a>` : '<a class="back" href="#/roles">Roles</a>')
+    : lib ? `<a class="back" href="#/area/${d.area}">${esc(area.name)}</a>` : '<a class="back" href="#/">Today</a>';
+  const where = d.role ? `${roleOf(d.role).icon} ${roleOf(d.role).name}` : area.name;
   const tft = tftFor(d);
   const secs = d.mins * 60;
   const missing = (d.needs || []).filter((n) => !state.settings.equipment[n]);
-  const timer = d.link ? `<p style="margin-top:16px"><a class="btn big" href="${d.link}?from=today" data-testid="open-brain">Open Pause &amp; pick</a></p>`
+  const pickHref = d.rolePick ? `#/brain?role=${s.role}&from=today` : `${d.link}?from=today`;
+  const timer = d.link ? `<p style="margin-top:16px"><a class="btn big" href="${pickHref}" data-testid="open-brain">${d.rolePick ? `Open ${esc(roleOf(s.role).name.toLowerCase())} pictures` : 'Open Pause &amp; pick'}</a></p>`
     : `<section class="timer" id="timer" data-secs="${d.stopwatch ? 0 : secs}" data-mode="${d.stopwatch ? 'up' : 'down'}">
       <div class="spread"><span class="eyebrow">${d.stopwatch ? 'Stopwatch' : `Timer · ${d.mins} min`}</span>${d.cues ? `<button class="btn small primary" data-action="coach" data-mode="${d.cues}" data-testid="coach-btn">Coach mode</button>` : ''}</div>
       <div class="clock" data-testid="clock">${d.stopwatch ? '0.0' : fmtDown(secs)}</div>
@@ -315,8 +338,9 @@ function viewDrill(id, from) {
         <button class="btn primary" data-testid="save-score">Save</button></form></section>`;
   }
   return `${back}
-    <header class="drill-head"><p class="eyebrow">${block ? esc(block.slot) + ' · ' : ''}${esc(area.name)} · ${d.mins} min</p>
+    <header class="drill-head"><p class="eyebrow">${block ? esc(block.slot) + ' · ' : ''}${esc(where)} · ${d.mins} min</p>
       <h1 data-testid="drill-name">${esc(d.name)}</h1><p class="drill-cue" data-testid="drill-cue">${esc(d.cue)}</p></header>
+    ${refTag(d)}
     ${missing.length ? `<p class="setup-note">Needs ${missing.map((m) => NEED_LABEL[m]).join(' and ')}. Dad can tick it in the Dad tab if you have it.</p>` : ''}
     <ol class="steps">${d.steps.map((x) => `<li>${esc(x)}</li>`).join('')}</ol>
     ${videoSection(videosFor(id))}
@@ -324,16 +348,16 @@ function viewDrill(id, from) {
     ${tft ? `<a class="tft-link" href="${tft}" target="_blank" rel="noopener" data-testid="tft-link"><span>Watch the ${esc(area.name)} videos<small>On tft-tube. Free login needed.</small></span><span aria-hidden="true">↗</span></a>` : ''}
     ${test}
     <div class="done-bar">${done ? '<p class="muted" data-testid="done-note">Done today. Nice work.</p>' : ''}
-      <button class="btn big primary" data-action="done" data-id="${id}" data-from="${lib ? 'lib' : ''}" data-testid="done-btn">${done ? 'Next' : 'Done'}</button></div>`;
+      <button class="btn big primary" data-action="done" data-id="${id}" data-from="${lib ? from : ''}" data-testid="done-btn">${done ? 'Next' : 'Done'}</button></div>`;
 }
 
 function viewLibrary() {
   const count = (id) => Object.values(D.DRILLS).filter((d) => d.area === id).length;
   const vcount = (id) => new Set(Object.entries(D.DRILLS).filter(([, d]) => d.area === id).flatMap(([k]) => videosFor(k).map((v) => v.id))).size;
-  return `<h1>Drills</h1><p class="muted" style="margin-top:8px">${D.AREAS.length} areas. Tap one to see its drills.</p>
+  return `<h1>Drills</h1><p class="muted" style="margin-top:8px">${D.AREAS.length} areas. Tap one to see its drills. Roles 9v9 has the drills for each position.</p>
     <div class="legend"><span class="l-tft">tft-tube area</span><span class="l-new">Added for the game around the ball</span></div>
     <p class="small muted" style="margin-top:8px">Every drill has a short YouTube demo. tft-tube areas also link to the TFT videos.</p>
-    <div class="tiles">${D.AREAS.map((a) => `<a class="tile ${a.tft ? '' : 'new'}" href="#/area/${a.id}" data-testid="tile"><span class="t-name">${esc(a.name)}</span><span class="t-meta">${plural(count(a.id), 'drill')} · ${plural(vcount(a.id), 'video')}${a.tft ? ' + TFT' : ''}</span></a>`).join('')}</div>`;
+    <div class="tiles">${D.AREAS.map((a) => `<a class="tile ${a.tft ? '' : 'new'}${a.id === 'roles' ? ' roles' : ''}" href="${a.href || `#/area/${a.id}`}" data-testid="tile"><span class="t-name">${esc(a.name)}</span><span class="t-meta">${plural(count(a.id), 'drill')} · ${plural(vcount(a.id), 'video')}${a.tft ? ' + TFT' : ''}</span></a>`).join('')}</div>`;
 }
 
 function viewArea(id) {
@@ -351,10 +375,20 @@ function viewArea(id) {
 }
 
 // ---------- brain ----------
-const brainRun = { current: null, picked: null, count: 0, from: null, order: [0, 1, 2] };
+const brainRun = { current: null, picked: null, count: 0, from: null, role: null, order: [0, 1, 2] };
 function shuffled(n) { const a = [...Array(n).keys()]; for (let i = n - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 function pickScenario(id) { brainRun.current = id; brainRun.picked = null; const sc = D.SCENARIOS.find((s) => s.id === id); brainRun.order = shuffled(sc.choices.length); }
-function pitchSVG(sc, showMove) {
+// Attacking pictures are written with the goal at the bottom; flip them so we attack up the screen.
+const flipY = (y) => 172 - y;
+function flipped(sc) {
+  if (!sc.att) return sc;
+  const p = (q) => [q[0], flipY(q[1])];
+  return { ...sc, you: p(sc.you), gk: p(sc.gk), ball: p(sc.ball), mates: sc.mates.map(p), opps: sc.opps.map(p),
+    arrows: sc.arrows.map(([x1, y1, x2, y2, w]) => [x1, flipY(y1), x2, flipY(y2), w]),
+    move: sc.move ? [sc.move[0], flipY(sc.move[1]), sc.move[2], flipY(sc.move[3])] : null };
+}
+function pitchSVG(raw, showMove) {
+  const sc = flipped(raw);
   const stripes = Array.from({ length: 12 }, (_, i) => `<rect x="0" y="${40 + i * 8}" width="100" height="4" fill="rgba(255,255,255,.035)"/>`).join('');
   const line = 'stroke="rgba(255,255,255,.6)" stroke-width=".5" fill="none"';
   const dot = (p, fill, stroke = '#0a1024', r = 3) => `<circle cx="${p[0]}" cy="${p[1]}" r="${r}" fill="${fill}" stroke="${stroke}" stroke-width=".7"/>`;
@@ -363,51 +397,72 @@ function pitchSVG(sc, showMove) {
     return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${col}" stroke-width=".8" stroke-dasharray="2 1.4" marker-end="url(#ah-${who})"/>`;
   };
   let move = '';
-  let labelBelow = false;
+  const avoid = [...sc.opps, ...sc.mates, sc.ball, ...(sc.gk[0] === sc.you[0] && sc.gk[1] === sc.you[1] ? [] : [sc.gk])];
+  const along = (x1, y1, x2, y2, from = 0) => { for (let t = from; t <= 1.001; t += 0.2) avoid.push([x1 + (x2 - x1) * t, y1 + (y2 - y1) * t]); };
+  sc.arrows.forEach(([x1, y1, x2, y2]) => along(x1, y1, x2, y2));
   if (showMove && sc.move) {
     const [x1, y1, x2, y2] = sc.move;
     const len = Math.hypot(x2 - x1, y2 - y1) || 1;
     const k = Math.max(0, (len - 4.6) / len); // stop the arrow at the target ring
     const ex = x1 + (x2 - x1) * k; const ey = y1 + (y2 - y1) * k;
-    labelBelow = y2 < y1 - 2 && Math.abs(x2 - x1) < Math.abs(y2 - y1) * 1.6;
+    along(x1, y1, x2, y2, 0.2);
     move = `<circle cx="${x2}" cy="${y2}" r="3.4" fill="none" stroke="#c8f65a" stroke-width=".7" stroke-dasharray="1.2 1"/><line class="move" x1="${x1}" y1="${y1}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="#c8f65a" stroke-width="1.3" marker-end="url(#ah-you)"/>`;
+  } else if (showMove) {
+    // no move = stay where you are and get set
+    move = `<circle cx="${sc.you[0]}" cy="${sc.you[1]}" r="6.2" fill="none" stroke="#c8f65a" stroke-width=".7" stroke-dasharray="1.2 1"/>`;
   }
+  // put YOU where it is clearest: above, below, right or left of the dot, inside the pitch
+  const spots = [[0, -5.4], [0, 8.2], [9.6, 1.3], [-9.6, 1.3]].map(([dx, dy]) => {
+    const x = sc.you[0] + dx; const y = sc.you[1] + dy;
+    const inside = x - 4 >= 1 && x + 4 <= 99 && y - 3.4 >= 41 && y + 0.6 <= 131.5;
+    const cx = x; const cy = y - 1.3;
+    const clear = Math.min(...avoid.map(([px, py]) => Math.hypot((px - cx) / 1.35, py - cy)));
+    return { x, y, inside, clear };
+  }).filter((c) => c.inside);
+  const lab = spots.find((c) => c.clear >= 5.2) || spots.sort((a, b) => b.clear - a.clear)[0];
   return `<svg viewBox="0 40 100 92" role="img" aria-label="Pitch picture: ${esc(sc.title)}" data-testid="pitch">
     <defs>${[['opp', '#ff8a96'], ['mate', '#9fdcff'], ['you', '#c8f65a']].map(([k, c]) => `<marker id="ah-${k}" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="${c}"/></marker>`).join('')}</defs>
     <rect x="0" y="40" width="100" height="92" fill="#11663f"/>${stripes}
-    <path d="M3 44 V128 H97 V44" ${line}/><line x1="3" y1="44" x2="97" y2="44" stroke="rgba(255,255,255,.6)" stroke-width=".5"/>
+    <g${sc.att ? ' transform="matrix(1 0 0 -1 0 172)"' : ''}><path d="M3 44 V128 H97 V44" ${line}/><line x1="3" y1="44" x2="97" y2="44" stroke="rgba(255,255,255,.6)" stroke-width=".5"/>
     <path d="M40 44 A10 10 0 0 0 60 44" ${line}/>
     <rect x="22" y="104" width="56" height="24" ${line}/><path d="M41.7 104 A13 13 0 0 1 58.3 104" ${line}/><rect x="38" y="120" width="24" height="8" ${line}/>
-    <circle cx="50" cy="114" r=".6" fill="rgba(255,255,255,.7)"/><rect x="44" y="128" width="12" height="2.6" ${line}/>
+    <circle cx="50" cy="114" r=".6" fill="rgba(255,255,255,.7)"/><rect x="44" y="128" width="12" height="2.6" ${line}/></g>
     ${sc.arrows.map(arrow).join('')}
     ${sc.opps.map((p) => dot(p, '#ff6272')).join('')}
     ${sc.mates.map((p) => dot(p, '#8fd3ff')).join('')}
-    ${dot(sc.gk, '#ffd23f')}
+    ${dot(sc.gk, sc.att ? '#ff9a3c' : '#ffd23f')}
     ${move}
     ${dot(sc.you, '#c8f65a', '#0a1024', 3.6)}
-    <text x="${sc.you[0]}" y="${labelBelow ? sc.you[1] + 8.2 : sc.you[1] - 5.4}" text-anchor="middle" font-size="3.6" font-weight="700" fill="#fff" font-family="Barlow Condensed, sans-serif" letter-spacing=".2">YOU</text>
+    <text x="${lab.x}" y="${lab.y}" text-anchor="middle" font-size="3.6" font-weight="700" fill="#fff" font-family="Barlow Condensed, sans-serif" letter-spacing=".2">YOU</text>
     ${dot(sc.ball, '#ffffff', '#111', 1.5)}
   </svg>`;
 }
 
-function viewBrain(from) {
-  if (!brainRun.current || !D.SCENARIOS.find((s) => s.id === brainRun.current)) {
-    pickScenario(P.nextScenario(state.brain).id);
+function viewBrain(from, roleParam) {
+  const role = roleOf(roleParam) ? roleParam : null;
+  if (role !== brainRun.role) { brainRun.role = role; brainRun.current = null; }
+  const pool = P.scenariosFor(role);
+  if (!brainRun.current || !pool.find((s) => s.id === brainRun.current)) {
+    pickScenario(P.nextScenario(state.brain, null, role).id);
   }
   if (from) brainRun.from = from;
   const sc = D.SCENARIOS.find((s) => s.id === brainRun.current);
-  const score = P.brainScore(state.brain);
+  const score = P.brainScore(state.brain, role);
   const bi = P.brainBelt(state.brain);
   const belt = bi >= 0 ? D.BELTS[bi] : null;
   const picked = brainRun.picked;
   const answered = picked !== null;
   const right = answered && picked === sc.answer;
-  const key = `<div class="key"><span><i style="background:#c8f65a"></i>You</span><span><i style="background:#8fd3ff"></i>Teammate</span><span><i style="background:#ff6272"></i>Opponent</span><span><i style="background:#ffd23f"></i>Your keeper</span><span><i style="background:#fff"></i>Ball</span></div>`;
-  const inToday = P.buildSession(todayKey(), state.settings).blocks.some((b) => b.drill === 'b_pause_pick');
-  const canFinish = brainRun.from === 'today' && inToday && brainRun.count >= 3 && !doneToday().includes('b_pause_pick');
-  return `<header class="brain-head"><div><p class="eyebrow">Game brain</p><h1>Pause &amp; pick</h1></div>
-      <div class="chips"><span class="chip" data-testid="brain-score">Right <b>${score}/${D.SCENARIOS.length}</b></span>${belt ? `<span class="chip belt"><i style="background:${belt.color}"></i>${belt.name} belt</span>` : ''}</div></header>
-    <div class="pitch-wrap">${pitchSVG(sc, answered)}</div>${key}
+  const key = `<div class="key"><span><i style="background:#c8f65a"></i>You</span><span><i style="background:#8fd3ff"></i>Teammate</span><span><i style="background:#ff6272"></i>Opponent</span>${sc.att ? '<span><i style="background:#ff9a3c"></i>Their keeper</span>' : '<span><i style="background:#ffd23f"></i>Your keeper</span>'}<span><i style="background:#fff"></i>Ball</span></div>`;
+  const pickDrill = P.buildSession(todayKey(), state.settings).blocks.map((b) => b.drill).find((d) => d === 'b_pause_pick' || d === 'b_role_pick');
+  const inToday = !!pickDrill;
+  const canFinish = brainRun.from === 'today' && inToday && brainRun.count >= 3 && !doneToday().includes(pickDrill);
+  const qs = (r) => [r ? `role=${r}` : '', brainRun.from ? `from=${brainRun.from}` : ''].filter(Boolean).join('&');
+  const pills = `<nav class="role-pills" aria-label="Pictures for a role" data-testid="role-pills">${[['', 'All'], ...D.ROLE_SEQ.map((r) => [r, `${D.ROLES[r].icon} ${D.ROLES[r].name}`])].map(([r, l]) => `<a href="#/brain${qs(r) ? `?${qs(r)}` : ''}" ${r === (role || '') ? 'aria-current="true"' : ''}>${esc(l)}</a>`).join('')}</nav>`;
+  return `<header class="brain-head"><div><p class="eyebrow">Game brain${role ? ` · ${esc(D.ROLES[role].name)}` : ''}</p><h1>Pause &amp; pick</h1></div>
+      <div class="chips"><span class="chip" data-testid="brain-score">Right <b>${score}/${pool.length}</b></span>${belt ? `<span class="chip belt"><i style="background:${belt.color}"></i>${belt.name} belt</span>` : ''}</div></header>
+    ${pills}
+    <div class="pitch-wrap">${sc.att ? '<span class="att-note" aria-hidden="true">We attack ↑</span>' : ''}${pitchSVG(sc, answered)}</div>${key}
     <p class="question" data-testid="question">${esc(sc.question)}</p>
     <div class="choices">${brainRun.order.map((i, pos) => {
     const c = sc.choices[i];
@@ -447,11 +502,12 @@ function viewRecords() {
       <form data-form="score" data-test="${t.id}"><label class="sr-only" for="r-${t.id}">${esc(t.name)}</label><input id="r-${t.id}" name="value" type="number" inputmode="decimal" step="${t.dir === 'down' ? '0.1' : '1'}" min="0" max="9999" required placeholder="${esc(t.unit)}"><button class="btn primary small">Log</button></form></section>`;
   }).join('');
   const bb = P.brainBelt(state.brain);
-  const refl = state.reflections.slice(0, 8).map((r) => `<li><p class="eyebrow">${esc(niceDate(r.date, { weekday: 'short', day: 'numeric', month: 'short' }))} · felt ${esc(r.feel || '?')}</p><p style="margin-top:6px"><b>Good:</b> ${esc(r.good)}</p><p><b>Fix:</b> ${esc(r.fix)}</p></li>`).join('');
+  const refl = state.reflections.slice(0, 8).map((r) => `<li><p class="eyebrow">${esc(niceDate(r.date, { weekday: 'short', day: 'numeric', month: 'short' }))} · felt ${esc(r.feel || '?')}${r.role && roleOf(r.role) ? ` · ${esc(roleOf(r.role).name)}: job ${esc(String(r.job || '?').toLowerCase())}` : ''}</p><p style="margin-top:6px"><b>Good:</b> ${esc(r.good)}</p><p><b>Fix:</b> ${esc(r.fix)}</p></li>`).join('');
   return `<h1>Records</h1>
     <div class="stat-row"><div class="stat"><p class="n" data-testid="stat-streak">${streak}</p><p class="l">Day streak</p></div><div class="stat"><p class="n">${week}</p><p class="l">Done this week</p></div><div class="stat"><p class="n" data-testid="stat-total">${total}</p><p class="l">Sessions ever</p></div></div>
     <div class="section"><h2>Tests</h2><p class="small muted" style="margin:-4px 0 12px">Belts go White, Yellow, Orange, Green, Blue, Purple, Black. They are starter targets for home, not age norms.</p>${recs}</div>
     <div class="section"><h2>Game brain</h2><section class="rec"><div class="spread"><h3>Pause &amp; pick</h3>${bb >= 0 ? `<span class="belt"><i style="background:${D.BELTS[bb].color}"></i>${D.BELTS[bb].name}</span>` : '<span class="belt muted">No belt yet</span>'}</div><p class="best" style="margin-top:6px">${P.brainScore(state.brain)}<small>/ ${D.SCENARIOS.length} right</small></p><p style="margin-top:12px"><a class="btn small" href="#/brain">Play</a></p></section></div>
+    <div class="section"><h2>Role badges</h2>${roleBadges()}</div>
     <div class="section"><h2>After the game</h2>${refl ? `<ul class="reflect-list">${refl}</ul>` : '<p class="muted">Nothing yet. On game day, answer the 3 questions after the game.</p>'}</div>`;
 }
 
@@ -462,13 +518,20 @@ function viewAfter() {
       <div class="field"><label for="fix">One thing to fix next time</label><textarea id="fix" name="fix" required maxlength="300"></textarea></div>
       <fieldset class="field" style="border:0;padding:0;margin:0"><legend class="label" style="margin-bottom:8px">How did it feel?</legend>
         <div class="seg">${['Great', 'OK', 'Hard'].map((f, i) => `<label><input type="radio" name="feel" value="${f}" ${i === 0 ? 'checked' : ''}><span>${f}</span></label>`).join('')}</div></fieldset>
+      <fieldset class="field" style="border:0;padding:0;margin:0"><legend class="label" style="margin-bottom:8px">You played ${esc(roleOf(P.roleFor(todayKey(), state.settings)).name.toLowerCase())}. Did you do your job?</legend>
+        <div class="seg" data-testid="job-seg">${['Yes', 'Some of it', 'Not yet'].map((f, i) => `<label><input type="radio" name="job" value="${f}" ${i === 1 ? 'checked' : ''}><span>${f}</span></label>`).join('')}</div></fieldset>
       <button class="btn big primary" data-testid="save-reflect">Save</button></form>`;
 }
 
 // ---------- dad ----------
+function roleDayText(key, st) {
+  const d = P.roleDayOf(key, st);
+  return d ? `${niceDate(d, { weekday: 'long' })}, plus pictures on the light day` : 'every other week (only one home day)';
+}
 function dayLabel(s) {
+  if (s.type === 'full' && s.roleDay) return `Role day: ${D.ROLES[s.role].name} drills + pictures`;
   if (s.type === 'full') { const t = D.THEMES.find((x) => x.id === s.theme); return `${t.name}: ${t.blurb}`; }
-  return { team: 'Team training + Daily 3', light: 'Light: Daily 3 + Pause & pick', game: 'Game + warm-up', rest: 'Rest' }[s.type];
+  return { team: 'Team training + Daily 3', light: `Light: Daily 3 + ${D.ROLES[s.role].name.toLowerCase()} pictures`, game: `Game: plays ${D.ROLES[s.role].name.toLowerCase()}`, rest: 'Rest' }[s.type];
 }
 function viewDad() {
   const st = state.settings;
@@ -488,8 +551,13 @@ function viewDad() {
     <div class="section"><h2>Player</h2><div class="card stack">
       <div class="field"><label for="name">Name on the app</label><input id="name" type="text" maxlength="20" data-set="playerName" value="${st.playerName === 'Player' ? '' : esc(st.playerName)}" placeholder="First name" autocomplete="off"><p class="small muted">Stays on this device only.</p></div>
       <div class="field"><label for="age">Age</label><input id="age" type="number" min="5" max="18" data-set="age" value="${st.age}"></div>
-      <fieldset class="field" style="border:0;padding:0;margin:0"><legend class="label" style="margin-bottom:8px">Position</legend><div class="seg">${D.POSITIONS.map((p) => `<label><input type="radio" name="position" value="${p.id}" data-set="position" ${st.position === p.id ? 'checked' : ''}><span>${p.name}</span></label>`).join('')}</div></fieldset>
+      <fieldset class="field" style="border:0;padding:0;margin:0"><legend class="label" style="margin-bottom:8px">Main position</legend><div class="seg">${D.POSITIONS.map((p) => `<label><input type="radio" name="position" value="${p.id}" data-set="position" ${st.position === p.id ? 'checked' : ''}><span>${p.name}</span></label>`).join('')}</div>
+        <p class="small muted" style="margin-top:8px">Sets the order of the weekly focus. Role days still rotate through every role.</p></fieldset>
     </div></div>
+    <div class="section"><h2>Role of the week</h2><div class="card stack">
+      <div class="field"><label for="role">Saturday he plays</label><select id="role" data-set="roleOverride" data-testid="role-select">${opt('auto', `Not sure: rotate (${D.ROLES[P.roleFor(key, { ...st, roleOverride: {} })].name})`, !st.roleOverride[ws])}${D.ROLE_SEQ.map((r) => opt(r, D.ROLES[r].name, st.roleOverride[ws] === r)).join('')}</select></div>
+      <p class="small muted">Role day: ${esc(roleDayText(key, st))}. Next weeks: ${[1, 2, 3].map((w) => esc(D.ROLES[P.roleFor(P.addDays(ws, w * 7), st)].name)).join(' → ')}.</p>
+      <p class="small muted">9v9 shape 3-2-3. At U10 he should try every role, keeper too.</p></div></div>
     <div class="section"><h2>His week</h2><div class="card week-grid">${sched}</div>
       <p class="small muted" style="margin-top:8px">Team days get the Daily 3 only. The day before a game is light.</p></div>
     <div class="section"><h2>Kit at home</h2><div class="card" style="padding-top:4px;padding-bottom:4px">${kit}</div>
@@ -511,11 +579,72 @@ function viewDad() {
       <div class="row" style="flex-wrap:wrap"><button class="btn small" data-action="export">Export</button><label class="btn small" for="import">Import<input id="import" type="file" accept="application/json,.json" data-action="import" class="sr-only"></label><button class="btn small ghost" data-action="reset" data-testid="reset">Reset all</button></div></div></div>
     <div class="section"><h2>Notes</h2><ul class="sources">
       <li>Videos: <a href="https://tft-tube.com/" target="_blank" rel="noopener">tft-tube.com</a> (Technical Football Tuition). Free login. Links only, nothing copied.</li>
-      <li>YouTube demos are embedded from their channels (Football Australia, England Football, FIFA 11+ Kids and coaching channels). Channel names are shown under each one. Nothing is downloaded. Videos marked <b>For Dad</b> are longer explainers.</li>
+      <li>YouTube demos are embedded from their channels (Japanese and Spanish coaching channels, club academies, FIFA 11+ Kids and others). Channel names are shown under each one. Nothing is downloaded. Videos marked <b>For Dad</b> are longer explainers.</li>
       <li>No heading practice: England's FA says heading should not be introduced in training at U6 to U11 (<a href="https://www.thefa.com/-/media/thefacom-new/files/rules-and-regulations/2023-24/heading-guidance/youth-heading-guidance-chart.ashx" target="_blank" rel="noopener">FA guidance</a>).</li>
-      <li>Four core skills for U10 to U13: striking, first touch, 1v1, running with the ball (<a href="https://footballaustralia.com.au/sites/ffa/files/2017-09/FFA%20National%20Curriculum_1ma6qrmro1pyq10gzxo5rcn7ld.pdf" target="_blank" rel="noopener">Football Australia curriculum</a>).</li>
+      <li>Roles follow Spanish, Japanese and Argentine academies: try every position, keeper included, and carry and take players on first. Sources are on the <a href="#/roles">Roles page</a>.</li>
       <li>Load: fewer organised hours a week than his age, 1 to 2 days off (<a href="https://publications.aap.org/pediatrics/article/119/6/1242/70751/" target="_blank" rel="noopener">AAP</a>).</li>
     </ul></div>`;
+}
+
+// ---------- roles ----------
+function miniPitch(current) {
+  const line = 'stroke="rgba(255,255,255,.55)" stroke-width=".5" fill="none"';
+  const abbr = { gk: 'GK', cb: 'CB', wd: 'WD', cm: 'CM', wing: 'W', st: 'ST' };
+  return `<svg class="mini-pitch" viewBox="0 0 60 80" role="img" aria-label="9v9 shape: 3-2-3" data-testid="mini-pitch">
+    <rect width="60" height="80" fill="#11663f"/><rect x="2" y="2" width="56" height="76" ${line}/><line x1="2" y1="40" x2="58" y2="40" ${line.replace('fill="none"', '')}/>
+    <circle cx="30" cy="40" r="6" ${line}/><rect x="16" y="66" width="28" height="12" ${line}/><rect x="16" y="2" width="28" height="12" ${line}/>
+    ${D.SHAPE_323.map((p) => `<a href="#/role/${p.role}"><circle cx="${p.at[0]}" cy="${p.at[1]}" r="4.6" fill="${p.role === current ? '#c8f65a' : '#8fd3ff'}" stroke="#0a1024" stroke-width=".6"/>
+      <text x="${p.at[0]}" y="${p.at[1] + 1.4}" text-anchor="middle" font-size="3.8" font-weight="700" fill="#0a1024" font-family="Barlow Condensed, sans-serif">${abbr[p.role]}</text></a>`).join('')}
+    <text x="57" y="7" text-anchor="end" font-size="2.6" fill="rgba(255,255,255,.75)" font-family="Barlow, sans-serif">we attack ↑</text>
+  </svg>`;
+}
+function badgeRow(r, prog) {
+  const p = prog[r];
+  return `<li class="badge ${p.badge ? 'got' : ''}" data-testid="badge-${r}"><span class="b-icon" aria-hidden="true">${D.ROLES[r].icon}</span><span class="b-name">${esc(D.ROLES[r].name)}</span>
+    <span class="b-meta">${p.badge ? 'Badge!' : `${Math.min(p.days, P.BADGE_DAYS)}/${P.BADGE_DAYS} role days · ${Math.min(p.right, P.BADGE_PICS)}/${P.BADGE_PICS} pictures`}</span></li>`;
+}
+function roleBadges() {
+  const prog = P.roleProgress(state.history, state.brain);
+  const got = D.ROLE_SEQ.filter((r) => prog[r].badge).length;
+  return `<p class="small muted" style="margin:-4px 0 12px">A badge for each role: ${P.BADGE_DAYS} role days done and ${P.BADGE_PICS} of its pictures right. All six, keeper included, makes you an All-rounder.</p>
+    <ul class="badges">${D.ROLE_SEQ.map((r) => badgeRow(r, prog)).join('')}</ul>
+    <p class="all-rounder ${prog.allRounder ? 'got' : ''}" data-testid="all-rounder">${prog.allRounder ? '🌟 All-rounder!' : `All-rounder: ${got}/6 badges`}</p>`;
+}
+function viewRoles() {
+  const cur = P.roleFor(todayKey(), state.settings);
+  const prog = P.roleProgress(state.history, state.brain);
+  const byRef = ['es', 'jp', 'ar'].map((k) => `<li><b>${D.REFS[k].flag} ${esc(D.REFS[k].name)}</b><ul>${D.ROLE_SOURCES.filter((x) => x.ref === k).map((x) => `<li><a href="${x.url}" target="_blank" rel="noopener">${esc(x.label)}</a></li>`).join('')}</ul></li>`).join('');
+  return `<a class="back" href="#/drills">Drills</a><h1 style="margin-top:6px">Roles 9v9</h1>
+    <p class="muted" style="margin-top:8px">Keeper plus 8, in a 3-2-3. You try every role: this week is <b>${esc(D.ROLES[cur].name)}</b>.</p>
+    <div class="roles-top">${miniPitch(cur)}
+      <ul class="role-grid" data-testid="role-list">${D.ROLE_SEQ.map((r) => `<li><a class="role-card ${r === cur ? 'now' : ''}" href="#/role/${r}" data-testid="role-card"><span class="rc-icon" aria-hidden="true">${D.ROLES[r].icon}</span>
+        <span><span class="rc-name">${esc(D.ROLES[r].name)}</span><span class="rc-meta">${r === cur ? 'This week · ' : ''}${prog[r].badge ? 'Badge ✓' : `${prog[r].right}/${prog[r].pics} pictures`}</span></span></a></li>`).join('')}</ul></div>
+    <div class="section"><h2>For any role</h2><p class="small muted" style="margin:-4px 0 10px">Games from the academies that train every role at once.</p><ul class="drill-list">${D.ROLE_EXTRAS.map((id) => { const d = D.DRILLS[id]; return `<li><a href="#/drill/${id}?from=role" data-testid="area-drill"><span><span class="name">${D.REFS[d.ref].flag} ${esc(d.name)}</span><br><span class="needs">${d.mins} min · ${esc(d.cue)}</span></span><span aria-hidden="true">›</span></a></li>`; }).join('')}</ul></div>
+    <div class="section"><h2>Why every role?</h2><div class="card stack small">
+      <p>Japan's FA says don't fix positions early, give kids lots of different roles up to U-14, and let outfield players go in goal too. A Spanish model for 8 and 9 year olds says every child should try every position.</p>
+      <p>At U-10, Kawasaki Frontale's academy starts with carrying the ball and taking players on. Argentina's baby fútbol does the same in small spaces. So the Daily 3 stays, and role work is one day a week.</p>
+      <p>No heading practice. Crosses in these drills stay low.</p></div></div>
+    <div class="section"><h2>Sources</h2><ul class="sources role-sources">${byRef}</ul></div>`;
+}
+function viewRole(id) {
+  const r = roleOf(id);
+  if (!r) return notFound();
+  const cur = P.roleFor(todayKey(), state.settings);
+  const prog = P.roleProgress(state.history, state.brain)[id];
+  const eq = state.settings.equipment;
+  const drills = r.drills.map((did) => {
+    const d = D.DRILLS[did];
+    const miss = (d.needs || []).filter((n) => !eq[n]);
+    return `<li><a href="#/drill/${did}?from=role" data-testid="role-drill"><span><span class="name">${d.ref ? `${D.REFS[d.ref].flag} ` : ''}${esc(d.name)}</span><br><span class="needs">${d.mins} min · ${esc(d.cue)}${d.needs ? ` · needs ${d.needs.map((n) => NEED_LABEL[n]).join(', ')}` : ''}${miss.length ? ' (not ticked)' : ''}</span></span><span aria-hidden="true">›</span></a></li>`;
+  }).join('');
+  return `<a class="back" href="#/roles">Roles</a>
+    <header class="drill-head"><p class="eyebrow">Role · 9v9${id === cur ? ' · this week' : ''}</p><h1 data-testid="role-name"><span aria-hidden="true">${r.icon}</span> ${esc(r.name)}</h1><p class="muted" style="margin-top:8px">${esc(r.blurb)}</p></header>
+    ${jobCard(id, 'My job', false)}
+    <div class="section"><h2>Drills</h2><ul class="drill-list">${drills}</ul></div>
+    <div class="section"><h2>Pictures</h2><div class="card spread"><span>${prog.right}/${prog.pics} right</span><a class="btn small primary" href="#/brain?role=${id}" data-testid="role-pictures">Play</a></div></div>
+    <div class="section"><h2>Watch a pro</h2><div class="card"><p>${esc(r.watch)}</p></div></div>
+    <div class="section"><h2>Badge</h2><ul class="badges">${badgeRow(id, P.roleProgress(state.history, state.brain))}</ul></div>
+    ${id === cur ? '' : `<p style="margin-top:18px"><button class="btn" data-action="set-role" data-role="${id}" data-testid="set-role">He plays ${esc(r.name.toLowerCase())} this Saturday</button></p>`}`;
 }
 
 function notFound() { return '<h1>Not found</h1><p style="margin-top:12px"><a href="#/">Back to today</a></p>'; }
@@ -539,7 +668,9 @@ function render(keepScroll = false) {
     case 'drill': html = viewDrill(parts[1], q.get('from')); tab = q.get('from') === 'lib' ? 'drills' : 'today'; break;
     case 'drills': html = viewLibrary(); tab = 'drills'; break;
     case 'area': html = viewArea(parts[1]); tab = 'drills'; break;
-    case 'brain': html = viewBrain(q.get('from')); tab = 'brain'; break;
+    case 'brain': html = viewBrain(q.get('from'), q.get('role')); tab = 'brain'; break;
+    case 'roles': html = viewRoles(); tab = 'drills'; break;
+    case 'role': html = viewRole(parts[1]); tab = 'drills'; break;
     case 'records': html = viewRecords(); tab = 'records'; break;
     case 'after': html = viewAfter(); tab = 'today'; break;
     case 'dad': html = viewDad(); tab = 'dad'; break;
@@ -566,10 +697,20 @@ app.addEventListener('click', (e) => {
   else if (a === 'timer-reset') tReset();
   else if (a === 'play-video') playVideo(b);
   else if (a === 'coach') { const d = D.DRILLS[parseRoute().parts[1]]; startCoach(b.dataset.mode, d ? d.cue : ''); }
-  else if (a === 'done') onDone(b.dataset.id, b.dataset.from === 'lib');
+  else if (a === 'done') onDone(b.dataset.id, b.dataset.from);
   else if (a === 'pick') onPick(Number(b.dataset.i));
-  else if (a === 'brain-next') { pickScenario(P.nextScenario(state.brain, brainRun.current).id); render(); }
-  else if (a === 'brain-finish') { const r = markDone('b_pause_pick'); toast(r.justCompleted ? `Daily done! Streak ${P.streak(todayKey(), state.history, state.settings)}` : 'Pause & pick done'); go(nextHash()); }
+  else if (a === 'brain-next') { pickScenario(P.nextScenario(state.brain, brainRun.current, brainRun.role).id); render(); }
+  else if (a === 'brain-finish') {
+    const id = P.buildSession(todayKey(), state.settings).blocks.map((x) => x.drill).find((d) => d === 'b_pause_pick' || d === 'b_role_pick');
+    const r = markDone(id);
+    toast(r.justCompleted ? `Daily done! Streak ${P.streak(todayKey(), state.history, state.settings)}` : 'Pictures done');
+    go(nextHash(id));
+  }
+  else if (a === 'set-role') {
+    const ws = P.weekStart(todayKey());
+    state.settings.roleOverride[ws] = b.dataset.role; state.settings.configured = true; persist();
+    toast(`This week: ${D.ROLES[b.dataset.role].name}`); render(true);
+  }
   else if (a === 'export') onExport();
   else if (a === 'reset') {
     if (confirm('Delete all progress and settings on this device?')) {
@@ -614,12 +755,14 @@ function nextHash(afterId) {
   return nxt ? `#/drill/${nxt.drill}` : '#/';
 }
 
-function onDone(id, fromLib) {
+function onDone(id, from) {
   const already = doneToday().includes(id);
   const r = markDone(id);
   const inSession = r.session.blocks.some((b) => b.drill === id);
+  const d = D.DRILLS[id];
+  const backTo = from === 'role' ? (d.role ? `#/role/${d.role}` : '#/roles') : from === 'lib' ? `#/area/${d.area}` : '#/';
   if (r.justCompleted) { beep(990, 0.2); toast(`Daily done! Streak ${P.streak(todayKey(), state.history, state.settings)}`); go('#/'); return; }
-  if (fromLib || !inSession) { if (!already) toast('Logged'); go(fromLib ? `#/area/${D.DRILLS[id].area}` : '#/'); return; }
+  if (from || !inSession) { if (!already) toast('Logged'); go(backTo); return; }
   go(nextHash(id));
 }
 
@@ -656,7 +799,7 @@ app.addEventListener('submit', (e) => {
     render(true);
   } else if (f.dataset.form === 'reflect') {
     const fd = new FormData(f);
-    state.reflections.unshift({ date: todayKey(), good: String(fd.get('good') || '').trim(), fix: String(fd.get('fix') || '').trim(), feel: fd.get('feel'), focus: P.focusFor(todayKey(), state.settings) });
+    state.reflections.unshift({ date: todayKey(), good: String(fd.get('good') || '').trim(), fix: String(fd.get('fix') || '').trim(), feel: fd.get('feel'), focus: P.focusFor(todayKey(), state.settings), role: P.roleFor(todayKey(), state.settings), job: fd.get('job') });
     persist();
     toast('Saved. Great work today.');
     go('#/');
@@ -670,9 +813,9 @@ app.addEventListener('change', (e) => {
   const s = state.settings;
   const path = t.dataset.set;
   let v = t.type === 'checkbox' ? t.checked : t.type === 'number' ? Number(t.value) : t.value;
-  if (path === 'focusOverride') {
+  if (path === 'focusOverride' || path === 'roleOverride') {
     const ws = P.weekStart(todayKey());
-    if (v === 'auto') delete s.focusOverride[ws]; else s.focusOverride[ws] = v;
+    if (v === 'auto') delete s[path][ws]; else s[path][ws] = v;
   } else if (path === 'playerName') s.playerName = String(v).trim().slice(0, 20) || 'Player';
   else if (path === 'age') s.age = Math.min(18, Math.max(5, Math.round(v) || 9));
   else if (path === 'teamMins' || path === 'gameMins') s[path] = Math.min(300, Math.max(0, Math.round(v) || 0));

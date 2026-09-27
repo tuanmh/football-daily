@@ -27,19 +27,19 @@ test('data integrity: every referenced drill exists', () => {
     assert.ok(d.mins > 0 && d.mins <= 6, `${id} mins`);
     for (const a of d.alt || []) assert.ok(ids.has(a), `${id} alt ${a}`);
     if (d.test) assert.ok(D.TESTS[d.test], `${id} test ${d.test}`);
-    if (d.cues) assert.ok(['colours', 'numbers', 'arrows', 'calls'].includes(d.cues), `${id} cues`);
+    if (d.cues) assert.ok(['colours', 'numbers', 'arrows', 'calls', 'turn', 'runs'].includes(d.cues), `${id} cues`);
   }
   for (const id of [...D.DAILY3.bounce, D.DAILY3.touch, D.DAILY3.touchAlt, D.DAILY3.look]) assert.ok(ids.has(id), id);
   for (const t of D.THEMES) for (const id of t.pool) assert.ok(ids.has(id), `${t.id} ${id}`);
   for (const [k, f] of Object.entries(D.FOCUSES)) assert.ok(ids.has(f.drill), `focus ${k}`);
   for (const q of Object.values(D.FOCUS_BY_POS)) for (const f of q) assert.ok(D.FOCUSES[f], f);
-  assert.equal(D.AREAS.length, 17);
+  assert.equal(D.AREAS.length, 18);
   assert.equal(D.AREAS.filter((a) => a.tft).length, 8);
   for (const a of D.AREAS) assert.ok(Object.values(D.DRILLS).some((d) => d.area === a.id), `area ${a.id} has a drill`);
 });
 
-test('no heading drills anywhere (FA guidance U6-U11)', () => {
-  const txt = JSON.stringify(D.DRILLS).toLowerCase();
+test('no heading drills anywhere (no heading practice at U10)', () => {
+  const txt = (JSON.stringify(D.DRILLS) + JSON.stringify(D.SCENARIOS)).toLowerCase();
   assert.ok(!/\bheader|\bheading\b|\bhead the ball/.test(txt));
 });
 
@@ -75,6 +75,106 @@ test('day types follow the schedule', () => {
   assert.deepEqual(types, ['full', 'team', 'full', 'team', 'light', 'game', 'rest']);
 });
 
+test('role day = Daily 3 + 2 role drills + role pictures, and it is the last full day', () => {
+  const st = P.mergeSettings({ focusStart: '2026-09-28' });
+  assert.equal(P.roleDayOf('2026-09-28', st), '2026-09-30');
+  const s = P.buildSession('2026-09-30', st);
+  assert.equal(s.roleDay, true);
+  assert.equal(s.theme, null);
+  assert.deepEqual(s.blocks.map((b) => b.slot), ['Bounce', 'Touch', 'Look', 'Role', 'Role', 'Brain']);
+  assert.equal(s.blocks.at(-1).drill, 'b_role_pick');
+  for (const b of s.blocks.filter((x) => x.slot === 'Role')) assert.ok(D.ROLES[s.role].drills.includes(b.drill) || !P.canDo(D.ROLES[s.role].drills[0], st.equipment), b.drill);
+  assert.ok(s.minutes >= 15 && s.minutes <= 25, `minutes ${s.minutes}`);
+  const mon = P.buildSession('2026-09-28', st);
+  assert.equal(mon.roleDay, false);
+  assert.ok(mon.theme);
+});
+
+test('role of the week rotates through all six, keeper included; Dad can set it for one week', () => {
+  const st = P.mergeSettings({ focusStart: '2026-09-28' });
+  const seen = [];
+  for (let w = 0; w < 6; w++) seen.push(P.roleFor(P.addDays('2026-09-28', w * 7), st));
+  assert.deepEqual([...seen].sort(), [...D.ROLE_SEQ].sort());
+  assert.ok(seen.includes('gk'));
+  assert.equal(P.roleFor(P.addDays('2026-09-28', 42), st), seen[0], 'wraps');
+  const ov = P.mergeSettings({ focusStart: '2026-09-28', roleOverride: { '2026-09-28': 'st' } });
+  assert.equal(P.roleFor('2026-10-03', ov), 'st');
+  assert.equal(P.buildSession('2026-09-30', ov).blocks.filter((b) => b.slot === 'Role').every((b) => D.DRILLS[b.drill].role === 'st' || !D.DRILLS[b.drill].role), true);
+  assert.equal(P.roleFor('2026-10-05', ov), seen[1], 'override is one week only');
+});
+
+test('role drills rotate in pairs so all 3 of a role come round', () => {
+  const st = P.mergeSettings({ focusStart: '2026-09-28', roleOverride: {} });
+  const got = new Set();
+  for (let w = 0; w < 3; w++) {
+    const k = P.addDays('2026-09-30', w * 7);
+    const s2 = { ...st, roleOverride: { [P.weekStart(k)]: 'cm' } };
+    P.roleDrillsFor(k, s2).forEach((d) => got.add(d));
+  }
+  assert.deepEqual([...got].sort(), [...D.ROLES.cm.drills].sort());
+});
+
+test('themes still rotate with a role day; one home day = role day every other week', () => {
+  const st = P.mergeSettings({ schedule: { mon: 'home', tue: 'home', wed: 'home', thu: 'team', fri: 'home', sat: 'game', sun: 'rest' } });
+  const seen = new Set();
+  for (let i = 0; i < 35; i++) { const t = P.themeFor(P.addDays('2026-09-28', i), st); if (t) seen.add(t.id); }
+  assert.equal(seen.size, 5);
+  const one = P.mergeSettings({ schedule: { mon: 'team', tue: 'team', wed: 'home', thu: 'team', fri: 'home', sat: 'game', sun: 'rest' } });
+  const roleWeeks = [0, 1, 2, 3].map((w) => P.roleDayOf(P.addDays('2026-09-28', w * 7), one) !== null);
+  assert.deepEqual(roleWeeks.filter(Boolean).length, 2);
+  const themes = new Set();
+  for (let i = 0; i < 70; i++) { const t = P.themeFor(P.addDays('2026-09-28', i), one); if (t) themes.add(t.id); }
+  assert.equal(themes.size, 5, 'all themes still come round with one home day');
+});
+
+test('light day before a game uses this week\'s role pictures', () => {
+  const s = P.buildSession('2026-10-02', base());
+  assert.equal(s.type, 'light');
+  assert.equal(s.blocks.at(-1).drill, 'b_role_pick');
+});
+
+test('roles: every role has a 3-line job, 3 drills, 5+ pictures and a source-backed drill', () => {
+  assert.deepEqual([...D.ROLE_SEQ].sort(), ['cb', 'cm', 'gk', 'st', 'wd', 'wing']);
+  for (const r of D.ROLE_SEQ) {
+    const role = D.ROLES[r];
+    assert.ok(role.job.our && role.job.their && role.job.loose, `${r} job`);
+    for (const line of Object.values(role.job)) assert.ok(line.length <= 60, `${r} job line short`);
+    assert.equal(role.drills.length, 3, `${r} drills`);
+    for (const id of role.drills) { assert.ok(D.DRILLS[id], id); assert.equal(D.DRILLS[id].role, r, `${id} role`); }
+    assert.ok(P.scenariosFor(r).length >= 5, `${r} pictures`);
+    assert.ok(role.drills.some((id) => D.DRILLS[id].ref), `${r} has a Spain/Japan/Argentina drill`);
+  }
+  for (const d of Object.values(D.DRILLS)) if (d.ref) { assert.ok(D.REFS[d.ref], d.name); assert.ok(d.why, `${d.name} why`); }
+  const refs = new Set(Object.values(D.DRILLS).map((d) => d.ref).filter(Boolean));
+  assert.deepEqual([...refs].sort(), ['ar', 'es', 'jp']);
+  for (const x of D.ROLE_SOURCES) { assert.ok(D.REFS[x.ref]); assert.match(x.url, /^https:\/\//); assert.doesNotMatch(x.url, /footballaustralia/); }
+  assert.equal(D.SHAPE_323.length, 9, '9v9 = keeper + 8');
+  assert.ok(D.SCENARIOS.every((s) => s.role === null || D.ROLES[s.role]));
+});
+
+test('role badges need completed role days and right pictures; all six = All-rounder', () => {
+  const none = P.roleProgress({}, { answered: {} });
+  assert.equal(none.cb.badge, false);
+  assert.equal(none.allRounder, false);
+  const history = {}; const answered = {};
+  let n = 0;
+  for (const r of D.ROLE_SEQ) {
+    for (let i = 0; i < P.BADGE_DAYS; i++) history[P.addDays('2026-09-28', n++)] = { done: [], complete: true, role: r };
+    for (const sc of P.scenariosFor(r).slice(0, P.BADGE_PICS)) answered[sc.id] = true;
+  }
+  history['2026-12-01'] = { done: [], complete: false, role: 'cb' };
+  const all = P.roleProgress(history, { answered });
+  for (const r of D.ROLE_SEQ) assert.equal(all[r].badge, true, r);
+  assert.equal(all.allRounder, true);
+  assert.equal(all.cb.days, P.BADGE_DAYS, 'incomplete days do not count');
+});
+
+test('old saved positions (mid, fwd) map to the 9v9 roles', () => {
+  assert.equal(P.mergeSettings({ position: 'mid' }).position, 'cm');
+  assert.equal(P.mergeSettings({ position: 'fwd' }).position, 'st');
+  for (const p of D.POSITIONS) assert.ok(D.FOCUS_BY_POS[p.id], p.id);
+});
+
 test('full day = Daily 3 + focus + 2 theme drills, 15-25 min', () => {
   const s = P.buildSession('2026-09-28', base());
   assert.equal(s.type, 'full');
@@ -92,7 +192,7 @@ test('team day = Daily 3 only; light day adds brain; game = warm-up; rest = noth
   assert.ok(team.minutes <= 10);
   const light = P.buildSession('2026-10-02', st);
   assert.equal(light.type, 'light');
-  assert.ok(light.blocks.some((b) => b.drill === 'b_pause_pick'));
+  assert.ok(light.blocks.some((b) => b.drill === 'b_role_pick'));
   const game = P.buildSession('2026-10-03', st);
   assert.deepEqual(game.blocks.map((b) => b.drill), ['w_warmup']);
   const rest = P.buildSession('2026-10-04', st);
@@ -109,10 +209,10 @@ test('look slot swaps to a no-wall drill when there is no wall', () => {
   assert.equal(s3.blocks[2].drill, 'd_scan_toss');
 });
 
-test('themes rotate so all 5 appear within 3 weeks on the default schedule (2 full days a week)', () => {
+test('themes rotate so all 5 appear within 6 weeks on the default schedule (1 theme day + 1 role day a week)', () => {
   const st = base();
   const seen = new Set();
-  for (let i = 0; i < 21; i++) {
+  for (let i = 0; i < 42; i++) {
     const t = P.themeFor(P.addDays('2026-09-28', i), st);
     if (t) seen.add(t.id);
   }
@@ -141,6 +241,7 @@ test('focus: position queue, weekly rotation and override', () => {
   assert.equal(P.focusFor('2026-10-12', cb), 'headup');
   assert.equal(P.focusFor(P.addDays(start, 7 * D.FOCUS_SEQ.length), cb), 'bounce', 'wraps');
   const wing = P.mergeSettings({ focusStart: start, position: 'wing' });
+  assert.deepEqual(P.focusQueueFor(P.mergeSettings({ position: 'gk' })), D.FOCUS_BY_POS.gk);
   assert.equal(P.focusFor(P.addDays(start, 21), wing), 'wide');
   const ov = P.mergeSettings({ focusStart: start, focusOverride: { '2026-09-28': 'jockey' } });
   assert.equal(P.focusFor('2026-10-01', ov), 'jockey');
@@ -212,6 +313,10 @@ test('brain: score, belt, next scenario order', () => {
   assert.equal(P.brainBelt({ answered: {} }), -1);
   const first = P.nextScenario({ answered: {}, seenAt: {} });
   assert.equal(first.id, D.SCENARIOS[0].id);
+  const gk = P.nextScenario({ answered: {}, seenAt: {} }, null, 'gk');
+  assert.equal(gk.role, 'gk', 'role filter');
+  assert.equal(P.brainScore({ answered: { [gk.id]: true } }, 'gk'), 1);
+  assert.equal(P.brainScore({ answered: { [gk.id]: true } }, 'cb'), 0);
   const b = { answered: { [D.SCENARIOS[0].id]: true }, seenAt: {} };
   assert.equal(P.brainScore(b), 1);
   assert.equal(P.brainBelt(b), 0);
@@ -261,7 +366,7 @@ test('videos: every drill has at least one kid-level YouTube demo, ids valid, ke
   const { VIDEOS } = await import('../../site/js/videos.js');
   for (const k of Object.keys(VIDEOS)) assert.ok(D.DRILLS[k], `videos key ${k} is a drill`);
   for (const [id, d] of Object.entries(D.DRILLS)) {
-    if (id === 'b_pause_pick') continue; // in-app game, no video
+    if (D.DRILLS[id].link) continue; // in-app picture game, no video
     const list = VIDEOS[id] || [];
     assert.ok(list.some((v) => !v.dad), `${id} has a kid-level video`);
   }

@@ -1,12 +1,12 @@
 // Pure planning logic for Football Daily. No DOM, no storage: easy to unit test.
-import { DAILY3, DAY_KEYS, DRILLS, FOCUSES, FOCUS_BY_POS, JS_DAYS, SCENARIOS, TESTS, THEMES, BRAIN_BELT_STEPS } from './data.js';
+import { DAILY3, DAY_KEYS, DRILLS, FOCUSES, FOCUS_BY_POS, JS_DAYS, SCENARIOS, TESTS, THEMES, BRAIN_BELT_STEPS, ROLES, ROLE_SEQ } from './data.js';
 
 export const EPOCH = '2026-01-05'; // a Monday; fixed anchor for rotations
 
 export const DEFAULT_SETTINGS = {
   playerName: 'Player',
   age: 9,
-  position: 'cb', // cb | wing | mid | fwd
+  position: 'cb', // main position, sets the weekly focus order: gk | cb | wd | cm | wing | st
   schedule: { mon: 'home', tue: 'team', wed: 'home', thu: 'team', fri: 'home', sat: 'game', sun: 'rest' },
   equipment: { wall: true, rebounder: false, partner: true },
   teamMins: 75,
@@ -14,6 +14,7 @@ export const DEFAULT_SETTINGS = {
   focusQueue: null, // null = default queue for the position
   focusStart: null, // Monday the focus queue started; set on first run
   focusOverride: {}, // { 'YYYY-MM-DD' (Monday): focusId }
+  roleOverride: {}, // { 'YYYY-MM-DD' (Monday): roleId } = what he plays that Saturday
   speech: true,
 };
 
@@ -36,14 +37,18 @@ export function weekStart(key) { return addDays(key, -DAY_KEYS.indexOf(dayKeyOf(
 export function weekDates(key) { const s = weekStart(key); return DAY_KEYS.map((_, i) => addDays(s, i)); }
 
 // ---------- settings / equipment ----------
+const OLD_POSITIONS = { mid: 'cm', fwd: 'st' };
 export function mergeSettings(s = {}) {
-  return {
+  const m = {
     ...DEFAULT_SETTINGS,
     ...s,
     schedule: { ...DEFAULT_SETTINGS.schedule, ...(s.schedule || {}) },
     equipment: { ...DEFAULT_SETTINGS.equipment, ...(s.equipment || {}) },
     focusOverride: { ...(s.focusOverride || {}) },
+    roleOverride: { ...(s.roleOverride || {}) },
   };
+  if (OLD_POSITIONS[m.position]) m.position = OLD_POSITIONS[m.position];
+  return m;
 }
 
 export function focusQueueFor(settings) {
@@ -89,17 +94,44 @@ export function focusFor(key, settings) {
   return q[((w % q.length) + q.length) % q.length];
 }
 
-// Themes rotate across full days only, so every theme comes round even when
+const mod = (a, n) => ((a % n) + n) % n;
+export function weekIndex(key) { return Math.floor(daysBetween(weekStart(EPOCH), weekStart(key)) / 7); }
+function fullDays(key, settings) { return weekDates(key).filter((d) => dayType(d, settings) === 'full'); }
+
+// ---------- roles (9v9) ----------
+// Role of the week: what he plays on Saturday. Rotates through all six unless Dad sets it.
+export function roleFor(key, settings) {
+  const o = settings.roleOverride && settings.roleOverride[weekStart(key)];
+  if (o && ROLES[o]) return o;
+  const start = settings.focusStart ? weekStart(settings.focusStart) : weekStart(EPOCH);
+  const w = Math.floor(daysBetween(start, weekStart(key)) / 7);
+  return ROLE_SEQ[mod(w, ROLE_SEQ.length)];
+}
+// One role day a week: the last full day. With a single full day, every other week.
+export function roleDayOf(key, settings) {
+  const full = fullDays(key, settings);
+  if (full.length >= 2) return full[full.length - 1];
+  if (full.length === 1 && mod(weekIndex(key), 2) === 1) return full[0];
+  return null;
+}
+export function isRoleDay(key, settings) { return roleDayOf(key, settings) === key; }
+// The two role drills for this week: the role's 3 drills rotate in pairs week to week.
+export function roleDrillsFor(key, settings) {
+  const list = ROLES[roleFor(key, settings)].drills;
+  const i = mod(weekIndex(key), list.length);
+  return [list[i], list[(i + 1) % list.length]];
+}
+
+// Themes rotate across the other full days, so every theme comes round even when
 // team training eats some days. Returns { theme, occurrence } where occurrence
 // counts how many times this theme has come round (used to rotate its drills).
 export function themeSlot(key, settings) {
-  if (dayType(key, settings) !== 'full') return null;
-  const perWeek = DAY_KEYS.filter((_, i) => dayType(addDays(weekStart(EPOCH), i), settings) === 'full').length || 1;
-  const w = Math.floor(daysBetween(weekStart(EPOCH), weekStart(key)) / 7);
-  const i = weekDates(key).filter((d) => dayType(d, settings) === 'full').indexOf(key);
-  const slot = w * perWeek + i;
+  if (dayType(key, settings) !== 'full' || isRoleDay(key, settings)) return null;
+  const full = fullDays(key, settings);
+  const w = weekIndex(key);
+  const slot = full.length >= 2 ? w * (full.length - 1) + full.indexOf(key) : Math.floor(w / 2);
   const L = THEMES.length;
-  return { theme: THEMES[((slot % L) + L) % L], occurrence: Math.floor(slot / L) };
+  return { theme: THEMES[mod(slot, L)], occurrence: Math.floor(slot / L) };
 }
 export function themeFor(key, settings) {
   const t = themeSlot(key, settings);
@@ -125,13 +157,20 @@ export function buildSession(key, rawSettings) {
   };
 
   let theme = null;
+  const role = roleFor(key, settings);
+  const roleDay = type === 'full' && isRoleDay(key, settings);
   if (type === 'game') {
     push('Warm-up', 'w_warmup');
   } else if (type === 'team') {
     daily3();
   } else if (type === 'light') {
     daily3();
-    push('Brain', 'b_pause_pick');
+    push('Brain', 'b_role_pick');
+  } else if (roleDay) {
+    // Role day replaces a theme day: Daily 3, 2 role drills, 3 role pictures.
+    daily3();
+    for (const id of roleDrillsFor(key, settings)) push('Role', id);
+    push('Brain', 'b_role_pick');
   } else if (type === 'full') {
     daily3();
     push('Focus', FOCUSES[focusId].drill);
@@ -147,7 +186,7 @@ export function buildSession(key, rawSettings) {
     }
   }
   const minutes = blocks.reduce((m, b) => m + DRILLS[b.drill].mins, 0);
-  return { date: key, type, focus: focusId, theme: theme ? theme.id : null, blocks, minutes };
+  return { date: key, type, focus: focusId, theme: theme ? theme.id : null, role, roleDay, blocks, minutes };
 }
 
 // ---------- progress ----------
@@ -204,9 +243,10 @@ export function isPB(testId, value, records) {
   return TESTS[testId].dir === 'down' ? value < b : value > b;
 }
 
-export function brainScore(brain) {
+export function scenariosFor(role) { return role && ROLES[role] ? SCENARIOS.filter((s) => s.role === role) : SCENARIOS; }
+export function brainScore(brain, role = null) {
   const a = (brain && brain.answered) || {};
-  return SCENARIOS.filter((s) => a[s.id] === true).length;
+  return scenariosFor(role).filter((s) => a[s.id] === true).length;
 }
 export function brainBelt(brain) {
   const score = brainScore(brain);
@@ -216,15 +256,30 @@ export function brainBelt(brain) {
 }
 
 // Pick the next brain scenario: unseen first, then ones got wrong, then oldest.
-export function nextScenario(brain, skipId = null) {
+export function nextScenario(brain, skipId = null, role = null) {
   const a = (brain && brain.answered) || {};
   const seenAt = (brain && brain.seenAt) || {};
-  const pool = SCENARIOS.filter((s) => s.id !== skipId);
+  const pool = scenariosFor(role).filter((s) => s.id !== skipId);
   const unseen = pool.filter((s) => !(s.id in a));
   if (unseen.length) return unseen[0];
   const wrong = pool.filter((s) => a[s.id] === false);
   if (wrong.length) return wrong[0];
   return [...pool].sort((x, y) => (seenAt[x.id] || 0) - (seenAt[y.id] || 0))[0];
+}
+
+// Role badges: 2 role days done in that role and 5 of its pictures right.
+// All-rounder: every role's badge, keeper included.
+export const BADGE_DAYS = 2;
+export const BADGE_PICS = 5;
+export function roleProgress(history, brain) {
+  const out = {};
+  for (const r of ROLE_SEQ) {
+    const days = Object.values(history || {}).filter((h) => h && h.complete && h.role === r).length;
+    const right = brainScore(brain, r);
+    out[r] = { days, right, pics: scenariosFor(r).length, badge: days >= BADGE_DAYS && right >= BADGE_PICS };
+  }
+  out.allRounder = ROLE_SEQ.every((r) => out[r].badge);
+  return out;
 }
 
 // ---------- load guard ----------

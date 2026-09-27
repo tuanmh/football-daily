@@ -1,5 +1,7 @@
 // Content for Football Daily: areas, drills, tests, belts, focuses, themes, brain pictures.
-// Plain data only. Logic lives in plan.js.
+// Plain data only. Logic lives in plan.js. Role content (9v9) lives in roles.js.
+import { ROLE_DRILLS, ROLE_SCENARIOS, BASE_SCENARIO_ROLES } from './roles.js';
+export { ROLES, ROLE_SEQ, REFS, ROLE_SOURCES, SHAPE_323, ROLE_EXTRAS } from './roles.js';
 
 export const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 export const JS_DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']; // Date#getUTCDay order
@@ -19,7 +21,7 @@ export const TFT = {
   hopping: 'https://tft-tube.com/2-hopping-foot-shapes/',
 };
 
-// 17 areas: the 8 tft-tube tiles plus 9 added for the game around the ball.
+// 18 areas: the 8 tft-tube tiles, 9 added for the game around the ball, and the 9v9 roles.
 export const AREAS = [
   { id: 'agility', name: 'Agility', tft: TFT.agility },
   { id: 'control', name: 'Control & Pass', tft: TFT.control },
@@ -38,6 +40,7 @@ export const AREAS = [
   { id: 'shooting', name: 'Shooting', blurb: 'Both feet, laces, on target.' },
   { id: 'weak', name: 'Weak Foot', blurb: 'Make the other foot useful.' },
   { id: 'warmup', name: 'Warm-up & Recovery', blurb: 'Ready before, looked after after.' },
+  { id: 'roles', name: 'Roles 9v9', blurb: 'Keeper, centre back, wide defender, midfield, winger, striker.', href: '#/roles' },
 ];
 
 export const BELTS = [
@@ -59,11 +62,11 @@ export const TESTS = {
   slalom: { id: 'slalom', name: 'Slalom time', unit: 's', dir: 'down', steps: [26, 23, 21, 19, 17, 16, 15] },
   shots: { id: 'shots', name: 'Shots on target', unit: '/10', dir: 'up', steps: [3, 4, 5, 6, 7, 8, 9] },
 };
-export const BRAIN_BELT_STEPS = [1, 3, 5, 7, 9, 11, 12];
+export const BRAIN_BELT_STEPS = [1, 4, 8, 14, 22, 32, 42];
 
 // needs: 'wall' | 'rebounder' | 'partner'. alt: tried in order when needs are missing.
 // cues: the app flashes colours / numbers / arrows / calls during the timer.
-export const DRILLS = {
+const CORE_DRILLS = {
   // Daily 3: BOUNCE slot
   d_toetaps: { area: 'footwork', name: 'Toe taps', mins: 2, cue: 'Bounce', test: 'toetaps',
     steps: ['Ball in front of you. Tap the top of it with one foot, then the other.', 'Stay on your toes with soft knees. Quick and light.', '30 seconds on, 15 seconds rest, twice. Count your taps on the second go and log them.'] },
@@ -139,6 +142,8 @@ export const DRILLS = {
   // Theme: BRAIN (easy on the legs)
   b_pause_pick: { area: 'brain', name: 'Pause & pick', mins: 5, cue: 'What would you do?', link: '#/brain',
     steps: ['Open the Brain tab and answer 3 pictures.', 'Read why the answer is right before the next one.'] },
+  b_role_pick: { area: 'brain', name: 'Role pictures', mins: 5, cue: 'What is my job?', link: '#/brain', rolePick: true,
+    steps: ['Open the pictures for this week\'s role and answer 3.', 'Say your job out loud before you pick.'] },
   b_where_go: { area: 'position', name: 'Where do I go?', mins: 5, cue: 'Our ball, their ball', cues: 'calls',
     steps: ['Set 3 cones: WIDE (by the touchline), GOAL-SIDE (between the middle and your goal) and CORNER (corner of the box).', 'OUR BALL: sprint WIDE. THEIR BALL: GOAL-SIDE. KEEPER\'S BALL: CORNER.', 'Jog back to the middle each time, on your toes.'] },
   b_watch_pro: { area: 'brain', name: 'Watch a pro', mins: 5, cue: 'Count the checks',
@@ -180,6 +185,7 @@ export const DRILLS = {
   w_cooldown: { area: 'warmup', name: 'Cool-down', mins: 3, cue: 'Slow breaths',
     steps: ['Walk for 1 minute.', 'Hold each stretch for 15 seconds: calves, thighs, hamstrings, hips.', 'Drink water.'] },
 };
+export const DRILLS = { ...CORE_DRILLS, ...ROLE_DRILLS };
 
 export const DAILY3 = {
   bounce: ['d_toetaps', 'd_bounce_react', 'd_tick_tock', 'd_hops'],
@@ -200,16 +206,20 @@ export const FOCUSES = {
 };
 export const FOCUS_SEQ = ['bounce', 'look', 'headup', 'jockey', 'level', 'keeper', 'second'];
 export const FOCUS_BY_POS = {
+  gk: ['bounce', 'look', 'keeper', 'second', 'headup', 'jockey'],
   cb: FOCUS_SEQ,
+  wd: ['bounce', 'look', 'jockey', 'wide', 'second', 'headup'],
+  cm: ['bounce', 'look', 'headup', 'second', 'jockey', 'wide'],
   wing: ['bounce', 'look', 'headup', 'wide', 'second', 'jockey'],
-  mid: ['bounce', 'look', 'headup', 'second', 'jockey', 'wide'],
-  fwd: ['bounce', 'look', 'headup', 'second', 'wide', 'jockey'],
+  st: ['bounce', 'look', 'headup', 'second', 'wide', 'jockey'],
 };
 export const POSITIONS = [
+  { id: 'gk', name: 'Keeper' },
   { id: 'cb', name: 'Centre back' },
+  { id: 'wd', name: 'Wide defender' },
+  { id: 'cm', name: 'Midfield' },
   { id: 'wing', name: 'Winger' },
-  { id: 'mid', name: 'Midfield' },
-  { id: 'fwd', name: 'Forward' },
+  { id: 'st', name: 'Striker' },
 ];
 
 export const THEMES = [
@@ -222,7 +232,7 @@ export const THEMES = [
 
 // Pause & pick. Pitch coords: x 0-100 (left to right), y 0-130 (our goal at the bottom).
 // arrows: [x1, y1, x2, y2, who]; move: the right move for YOU, drawn after answering.
-export const SCENARIOS = [
+const BASE_SCENARIOS = [
   { id: 'keeper-ball', title: 'Keeper has it', cue: 'Keeper\'s ball: go wide',
     question: 'Your keeper has the ball in his hands. You are a centre back. What do you do?',
     you: [46, 117], gk: [52, 123], ball: [54, 121], mates: [[30, 92], [70, 90], [50, 70]], opps: [[44, 84], [62, 76], [30, 74]], arrows: [],
@@ -261,13 +271,13 @@ export const SCENARIOS = [
     explain: 'The clearance isn\'t the end. Whoever moves first wins the second ball. Your first step is toward it.' },
   { id: 'find-the-line', title: 'We just won it', cue: 'Find the line',
     question: 'Your team just won the ball. You are the winger, standing right behind your teammate. Where do you go?',
-    you: [52, 80], gk: [50, 124], ball: [50, 70], mates: [[50, 73], [28, 66], [50, 102]], opps: [[46, 60], [62, 62], [34, 56]], arrows: [],
+    you: [54, 82], gk: [50, 124], ball: [50, 70], mates: [[50, 73], [28, 66], [50, 102]], opps: [[46, 60], [62, 62], [34, 56]], arrows: [],
     choices: ['Stay close behind him', 'Sprint wide to the touchline', 'Stand next to him and shout for it'], answer: 1,
-    move: [52, 80, 92, 64],
+    move: [54, 82, 92, 64],
     explain: 'Getting wide makes the pitch big and gives him a pass he can see. Stacked behind him, one defender marks you both.' },
   { id: 'track-runner', title: 'Your player runs', cue: 'If your man runs, you run',
     question: 'The player you are marking suddenly sprints past you toward your goal. What do you do?',
-    you: [40, 97], gk: [50, 124], ball: [72, 70], mates: [[70, 78], [58, 100]], opps: [[37, 93], [72, 68]], arrows: [[37, 93, 43, 114, 'opp']],
+    you: [40, 97], gk: [50, 124], ball: [72, 70], mates: [[70, 78], [58, 100]], opps: [[33, 92], [72, 68]], arrows: [[33, 92, 41, 114, 'opp']],
     choices: ['Stay where you are', 'Run with him and stay goal-side', 'Point at him and shout'], answer: 1,
     move: [40, 97, 46, 111],
     explain: 'If your man runs, you run. Stay between him and your goal, and keep checking where he is.' },
@@ -296,3 +306,6 @@ export const SCENARIOS = [
     move: [88, 82, 72, 77],
     explain: 'From straight behind, the defender hides you. At an angle he can see you and pass to you.' },
 ];
+
+// All pictures: the originals (tagged with a role) then the 9v9 role pictures.
+export const SCENARIOS = [...BASE_SCENARIOS.map((sc) => ({ ...sc, role: BASE_SCENARIO_ROLES[sc.id] || null })), ...ROLE_SCENARIOS];
